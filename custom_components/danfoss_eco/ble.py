@@ -113,6 +113,10 @@ class EtrvClient:
         try:
             pin_bytes = struct.pack(">I", self._pin)
             await client.write_gatt_char(UUID_PIN, pin_bytes, response=True)
+        except BleakCharacteristicNotFoundError as err:
+            await self._clear_service_cache(client)
+            await client.disconnect()
+            raise EtrvCharacteristicMissing(f"PIN write failed: {err}") from err
         except BleakError as err:
             await client.disconnect()
             raise EtrvError(f"PIN write failed: {err}") from err

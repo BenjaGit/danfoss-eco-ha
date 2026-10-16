@@ -84,7 +84,10 @@ class FakeClient:
         return bytes(8)
 
     async def write_gatt_char(self, uuid, data, response=True):
-        pass
+        if uuid in self.missing:
+            raise BleakCharacteristicNotFoundError(
+                f"Characteristic {uuid} was not found!"
+            )
 
     async def clear_cache(self):
         self.cache_cleared = True
@@ -130,6 +133,37 @@ def test_successful_poll_keeps_service_cache():
     client, err = _read_state(set())
     assert err is None, err
     assert not client.cache_cleared
+    assert client.disconnected
+
+
+def test_missing_pin_characteristic_clears_service_cache():
+    # Seen on real hardware: the stale table can lack the PIN characteristic,
+    # so the poll fails while connecting, before any read.
+    client = FakeClient({ble.UUID_PIN})
+    etrv = ble.EtrvClient.__new__(ble.EtrvClient)
+    etrv.address = "00:04:2F:00:00:00"
+    etrv._key = KEY
+    etrv._pin = 0
+
+    async def establish_connection(*args, **kwargs):
+        return client
+
+    async def close_stale(address):
+        pass
+
+    ble.bluetooth = types.SimpleNamespace(
+        async_ble_device_from_address=lambda *a, **k: object()
+    )
+    ble.establish_connection = establish_connection
+    ble.close_stale_connections_by_address = close_stale
+    etrv._hass = None
+    try:
+        asyncio.run(etrv._connect())
+    except ble.EtrvCharacteristicMissing:
+        pass
+    else:
+        raise AssertionError("expected EtrvCharacteristicMissing")
+    assert client.cache_cleared
     assert client.disconnected
 
 
