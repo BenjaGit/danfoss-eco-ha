@@ -151,18 +151,26 @@ def test_missing_pin_characteristic_clears_service_cache():
     async def close_stale(address):
         pass
 
-    ble.bluetooth = types.SimpleNamespace(
-        async_ble_device_from_address=lambda *a, **k: object()
-    )
-    ble.establish_connection = establish_connection
-    ble.close_stale_connections_by_address = close_stale
+    patched = {
+        "bluetooth": types.SimpleNamespace(
+            async_ble_device_from_address=lambda *a, **k: object()
+        ),
+        "establish_connection": establish_connection,
+        "close_stale_connections_by_address": close_stale,
+    }
+    saved = {name: getattr(ble, name) for name in patched}
     etrv._hass = None
     try:
+        for name, value in patched.items():
+            setattr(ble, name, value)
         asyncio.run(etrv._connect())
     except ble.EtrvCharacteristicMissing:
         pass
     else:
         raise AssertionError("expected EtrvCharacteristicMissing")
+    finally:
+        for name, value in saved.items():
+            setattr(ble, name, value)
     assert client.cache_cleared
     assert client.disconnected
 
