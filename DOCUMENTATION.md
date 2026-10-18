@@ -813,9 +813,9 @@ lets reads through but can make writes silently fail.
 
 **`Problem` sensor is on with `e10_invalid_time`.**
 Harmless; the integration will sync the clock and clear the flag (keep *Automatically
-sync the device clock* on), or press `button.<name>_sync_time`. The poll that carries
-the write still shows the old flag, because the device is read before it is written;
-the next poll shows it cleared.
+sync the device clock* on), or press `button.<name>_sync_time`. The error register is
+read back in the same connection after the write, so the flag clears on the poll that
+carries the sync.
 
 **A thermostat already used in the Danfoss app.**
 No conflict — app pairing and HA pairing use the same key; both can coexist. You do not
