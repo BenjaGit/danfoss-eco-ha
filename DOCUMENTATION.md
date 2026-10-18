@@ -244,7 +244,7 @@ Open the device's integration entry → **Configure**:
 |---|---|---|
 | **Poll interval (minutes)** | 15 | How often HA reads the device. Lower = fresher data but more battery use and BLE traffic. 10–30 min is sensible. |
 | **Device PIN (0 = none)** | 0 | If you set a PIN in the Danfoss app, enter it here. It is written before every read/write. |
-| **Automatically sync the device clock** | on | When on, HA writes the correct time whenever the device's clock drifts more than 2 minutes. `E10 invalid time` on its own also triggers a sync, but at most once a day — some units never clear the flag even with a correct clock. |
+| **Automatically sync the device clock** | on | When on, HA writes the correct time whenever the device's clock drifts more than 2 minutes. `E10 invalid time` on its own also triggers a sync, but at most once a day. Every sync also clears E10, because the device does not clear it on its own even with a correct clock. |
 | **Keep the last reading for (hours)** | 24 | How long cached values stay on show after polls start failing. `0` = keep them indefinitely. See [section 11](#11-offline-behaviour-cached-readings--queued-commands). |
 | **Keep undelivered commands for (hours)** | 24 | How long a queued command waits for the thermostat to reappear before being discarded. `0` = wait indefinitely. |
 
@@ -270,7 +270,9 @@ to share.
 ### `danfoss_eco.sync_time`
 
 Writes the current local time (with UTC offset) to a device. Fixes E10 and keeps the
-on-board weekly schedule aligned to real time.
+on-board weekly schedule aligned to real time. In the same connection, right after the
+time, it clears the E10 flag in the error register, as the official app does after a
+battery swap; the other flags are written back unchanged.
 
 ```yaml
 action: danfoss_eco.sync_time
@@ -569,7 +571,9 @@ The key is the 16-byte secret read during pairing.
 ### Errors payload (8 bytes, decrypted)
 
 A uint16 flag field at offset 0: bit 8 = E9 valve doesn't close, bit 9 = E10 invalid
-time, bit 13 = E14 low battery, bit 14 = E15 very low battery.
+time, bit 13 = E14 low battery, bit 14 = E15 very low battery. The characteristic is
+writable: writing the flags back clears them (the official app writes eight zero bytes
+after setting the time).
 
 ### Time payload (8 bytes, decrypted)
 
@@ -808,8 +812,10 @@ If you set a PIN in the Danfoss app, enter it in **Configure → Device PIN**. A
 lets reads through but can make writes silently fail.
 
 **`Problem` sensor is on with `e10_invalid_time`.**
-Harmless; the integration will sync the clock on the next poll (keep *Automatically sync
-the device clock* on), or press `button.<name>_sync_time`.
+Harmless; the integration will sync the clock and clear the flag (keep *Automatically
+sync the device clock* on), or press `button.<name>_sync_time`. The poll that carries
+the write still shows the old flag, because the device is read before it is written;
+the next poll shows it cleared.
 
 **A thermostat already used in the Danfoss app.**
 No conflict — app pairing and HA pairing use the same key; both can coexist. You do not

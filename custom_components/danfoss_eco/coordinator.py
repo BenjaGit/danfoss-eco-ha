@@ -47,6 +47,7 @@ from .const import (
     RETRY_BACKOFF_S,
     STORAGE_VERSION,
     UUID_CURRENT_TIME,
+    UUID_ERRORS,
     UUID_SCHEDULE_1,
     UUID_SCHEDULE_2,
     UUID_SCHEDULE_3,
@@ -337,6 +338,12 @@ class EtrvCoordinator(DataUpdateCoordinator[EtrvState]):
         ops: list[tuple[str, bytes]] = []
         if snapshot.sync_time:
             ops.append((UUID_CURRENT_TIME, DeviceTime.now().pack()))
+            # The device keeps E10 raised after a battery swap even once the
+            # clock is right; the official app clears it by writing the error
+            # characteristic right after the time. Only E10 is cleared here.
+            errors = Errors.parse(raw["errors"])
+            if errors.flags.get("e10_invalid_time"):
+                ops.append((UUID_ERRORS, errors.without("e10_invalid_time")))
 
         changes: dict[str, Any] = {}
         for key, value in snapshot.settings.items():

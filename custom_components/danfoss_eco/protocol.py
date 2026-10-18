@@ -143,6 +143,13 @@ class Errors:
     def any_error(self) -> bool:
         return any(self.flags.values())
 
+    def without(self, name: str) -> bytes:
+        """The payload to write back with one flag cleared and the rest kept."""
+        out = bytearray(self.raw)
+        bits = struct.unpack_from(">H", out, 0)[0] & ~(1 << ERROR_FLAGS[name])
+        struct.pack_into(">H", out, 0, bits)
+        return bytes(out)
+
 
 @dataclass
 class DeviceTime:

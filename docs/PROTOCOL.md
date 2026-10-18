@@ -28,11 +28,13 @@ The device advertises continuously as a connectable BLE peripheral:
 | Characteristic | UUID (`100200xx-2749-0001-0000-00805f9b042f`) | Handle¹ | Access | Content (decrypted) |
 |---|---|---|---|---|
 | PIN | `...01` | 0x24 | write | `uint32 BE` PIN code, **plaintext** (not XXTEA) |
+| (unknown) | `...02` | 0x27 | read | 8 B, all zero on an Eco 2 |
 | Settings | `...03` | 0x2A | read/write | 16 B settings block (below) |
 | Temperature | `...05` | 0x2D | read/write | 8 B: `[0]` setpoint, `[1]` room temp (both ×0.5 °C); write back the full block with `[0]` changed |
 | Name | `...06` | 0x30 | read/write | device name, UTF-8, NUL-padded |
-| Current time | `...08` | — | read/write | `int32 BE` UTC epoch, `int32 BE` standard UTC offset in seconds, **without DST**. The device adds the offset itself and applies DST when settings config bit `0x02` is set (official app: `Date.getTime()/1000` + `TimeZone.getRawOffset()/1000`) |
-| Errors | `...09` | 0x39 | read | 8 B: `uint16 BE` flags at offset 0 (below) |
+| Current time | `...08` | 0x36 | read/write | `int32 BE` UTC epoch, `int32 BE` standard UTC offset in seconds, **without DST**. The device adds the offset itself and applies DST when settings config bit `0x02` is set (official app: `Date.getTime()/1000` + `TimeZone.getRawOffset()/1000`) |
+| Errors | `...09` | 0x39 | read/write | 8 B: `uint16 BE` flags at offset 0 (below). Writable: the device keeps E10 raised after a battery swap even with a correct clock, and the official app clears it by writing eight zero bytes here right after the time. This integration writes the read flags back with only E10 cleared, after every clock sync |
+| Language | `...0a` | 0x3C | write | 8 B, ASCII language code, NUL-padded (the app writes `da` right after the PIN) |
 | **Secret key** | `...0b` | 0x3F | read | 16 B raw key — **characteristic only exists in the GATT table while the pairing window is open** |
 
 ¹ handles from libetrv; this integration addresses by UUID only.

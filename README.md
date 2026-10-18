@@ -32,8 +32,9 @@ addresses, no hex keys and no command-line tools.
   human-readable sensor and the `danfoss_eco.set_schedule` service
 - ➕ **Add manually** — attach a thermostat by MAC + key even when it isn't advertising
 - 🕐 **Automatic time sync** — the device clock is corrected whenever it drifts or
-  flags `E10 INVALID TIME` (e.g. after a battery swap); manual *Sync time* button
-  and `danfoss_eco.sync_time` service included
+  flags `E10 INVALID TIME` (e.g. after a battery swap), and the sync clears E10 the
+  way the official app does; manual *Sync time* button and `danfoss_eco.sync_time`
+  service included
 - 🏖️ **Vacation mode** — `danfoss_eco.set_vacation` service programs the period
   and temperature; shows up as the *Away* preset
 - 📊 **Diagnostics** — battery, room temperature, Bluetooth signal (RSSI + which
