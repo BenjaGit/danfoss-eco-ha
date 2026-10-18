@@ -175,6 +175,21 @@ def test_missing_pin_characteristic_clears_service_cache():
     assert client.disconnected
 
 
+def test_read_name_returns_none_when_connect_fails():
+    # Seen on real hardware during pairing: the key read succeeds, the valve
+    # drops the link, and the follow-up connection for the name fails. That
+    # must fall back to a default name instead of aborting the pairing.
+    etrv = ble.EtrvClient.__new__(ble.EtrvClient)
+    etrv.address = "00:04:2F:00:00:00"
+    etrv._key = KEY
+
+    async def connect():
+        raise ble.EtrvError("Cannot connect: Disconnected")
+
+    etrv._connect = connect
+    assert asyncio.run(etrv.read_name()) is None
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

@@ -237,7 +237,14 @@ class EtrvClient:
         from .protocol import parse_name
 
         async with _BLE_LOCK:
-            client = await self._connect()
+            # Best effort: during pairing this runs right after the key read,
+            # when the valve often refuses a second connection. A missing name
+            # must not discard a key that was already retrieved.
+            try:
+                client = await self._connect()
+            except EtrvError as err:
+                _LOGGER.debug("%s: name read skipped: %s", self.address, err)
+                return None
             try:
                 return parse_name(await self._read(client, UUID_NAME))
             except EtrvError:
