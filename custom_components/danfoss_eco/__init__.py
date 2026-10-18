@@ -8,8 +8,9 @@ import voluptuous as vol
 from homeassistant.components import bluetooth
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.helpers import config_validation as cv, device_registry as dr
+from homeassistant.helpers.start import async_at_started
 from homeassistant.util import dt as dt_util
 
 from .ble import EtrvError
@@ -79,8 +80,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: DanfossEcoConfigEntry) -
     # setup on it: create the entities (they show the cached reading, or
     # "unavailable" if there is none) so the user always has the device page and
     # can hit "Refresh now". The coordinator keeps retrying on its own too.
-    await coordinator.async_refresh()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Don't wait for the first poll either. All thermostats share one BLE lock,
+    # so awaiting it here makes them read one by one during bootstrap - with a
+    # houseful of valves that held Home Assistant in "starting" until its 300 s
+    # stage timeout. Poll in the background once Home Assistant is up instead
+    # (immediately when the entry is added or reloaded later).
+    @callback
+    def _async_first_poll(_hass: HomeAssistant) -> None:
+        entry.async_create_background_task(
+            hass, coordinator.async_refresh(), f"{DOMAIN} first poll {coordinator.address}"
+        )
+
+    entry.async_on_unload(async_at_started(hass, _async_first_poll))
     # A thermostat that starts advertising again is the earliest signal that it
     # is reachable - use it to retry immediately instead of waiting out the poll
     # interval, which is what actually delivers queued commands "when it comes
