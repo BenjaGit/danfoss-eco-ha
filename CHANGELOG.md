@@ -2,6 +2,12 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.2 — fork: pairing keeps the key
+
+- Pairing no longer fails with "Unknown error" after the key was read. The valve
+  often refuses the follow-up connection used to read its name; that now falls
+  back to the default title instead of discarding the key.
+
 ## v1.3.0+benjagit.1 — fork: upstream fixes not yet merged
 
 Fork of deltasystems-pl/danfoss-eco-ha carrying two open upstream PRs by Lars Ryssel:
