@@ -2,6 +2,16 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.1 — fork: upstream fixes not yet merged
+
+Fork of deltasystems-pl/danfoss-eco-ha carrying two open upstream PRs by Lars Ryssel:
+
+- #2 Device clock: write UTC epoch + standard offset like the official app. Before
+  this, the weekly schedule ran 3 h early in Europe/Copenhagen summer time, and the
+  automatic time sync overwrote clocks set by the Danfoss app.
+- #3 Drop the cached BLE service table when a characteristic is missing, so a stale
+  cache no longer stops polling until Home Assistant restarts.
+
 ## v1.3.0 — offline resilience
 
 Radiator valves are weak-signal, deep-sleeping BLE devices. A proxy that is busy
