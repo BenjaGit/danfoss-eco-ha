@@ -2,6 +2,17 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.5 — fork: clock sync clears E10
+
+- Every clock sync (automatic, the *Sync time* button or
+  `danfoss_eco.sync_time`) now also clears `E10 invalid time`. The thermostat
+  keeps the flag after a battery swap even with a correct clock; the official
+  app clears it by writing the error register right after the time, and the
+  integration now does the same. Only E10 is cleared: E9, E14 and E15 are
+  written back as the device reported them.
+- PROTOCOL.md: the error characteristic is writable; adds `10020002` and the
+  language characteristic `1002000a`.
+
 ## v1.3.0+benjagit.4 — fork: startup no longer waits for the thermostats
 
 - Setup no longer waits for the first Bluetooth poll. All thermostats share
