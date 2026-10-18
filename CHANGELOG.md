@@ -2,6 +2,14 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.4 — fork: startup no longer waits for the thermostats
+
+- Setup no longer waits for the first Bluetooth poll. All thermostats share
+  one connection lock, so with many of them Home Assistant stayed in
+  "starting" until its 300 s timeout. Entities now come up on the cached
+  reading, and the first poll runs in the background once Home Assistant
+  has started.
+
 ## v1.3.0+benjagit.3 — fork: signal from the connecting proxy
 
 - The Bluetooth signal sensor (and its `source` attribute) now only uses
