@@ -62,6 +62,21 @@ _SCHEDULE_UUIDS = (UUID_SCHEDULE_1, UUID_SCHEDULE_2, UUID_SCHEDULE_3)
 WRITE_SETTLE_S = 0.5
 
 
+def last_connectable_signal(
+    hass: HomeAssistant, address: str
+) -> tuple[int | None, str | None]:
+    """RSSI and source of the latest advertisement from a connectable scanner.
+
+    Passive scanners (Shelly BLU gateways and the like) can hear a valve better
+    than the proxy that has to connect to it, so they are left out: the signal
+    shown should describe the link every poll actually uses.
+    """
+    info = bluetooth.async_last_service_info(hass, address, connectable=True)
+    if info is None:
+        return None, None
+    return info.rssi, info.source
+
+
 class EtrvError(Exception):
     """Communication failure."""
 

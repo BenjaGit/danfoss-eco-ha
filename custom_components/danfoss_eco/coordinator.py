@@ -29,7 +29,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .ble import EtrvClient, EtrvError
+from .ble import EtrvClient, EtrvError, last_connectable_signal
 from .const import (
     ADV_RETRY_MIN_INTERVAL_S,
     CONF_AUTO_TIME_SYNC,
@@ -272,12 +272,7 @@ class EtrvCoordinator(DataUpdateCoordinator[EtrvState]):
             rssi=None,
             source=None,
         )
-        info = bluetooth.async_last_service_info(
-            self.hass, self.address, connectable=False
-        )
-        if info:
-            state.rssi = info.rssi
-            state.source = info.source
+        state.rssi, state.source = last_connectable_signal(self.hass, self.address)
 
         parts = raw.get("schedule")
         if parts:
