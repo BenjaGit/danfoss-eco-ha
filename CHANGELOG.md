@@ -2,6 +2,12 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.6 — fork: E10 clears on the syncing poll
+
+- The error register is read back in the same connection after it is
+  written, like temperature, settings and time already were. After a clock
+  sync, E10 now disappears at once instead of on the next poll.
+
 ## v1.3.0+benjagit.5 — fork: clock sync clears E10
 
 - Every clock sync (automatic, the *Sync time* button or
