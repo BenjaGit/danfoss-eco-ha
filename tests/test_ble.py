@@ -216,6 +216,47 @@ def test_signal_comes_from_connectable_scanners_only():
         ble.bluetooth = saved
     assert calls == [True]
 
+
+class RecordingClient(FakeClient):
+    """Remembers writes and returns them on the next read, like the valve."""
+
+    def __init__(self, values: dict[str, bytes]):
+        super().__init__(set())
+        self.values = values
+
+    async def read_gatt_char(self, uuid):
+        return self.values.get(uuid, bytes(8))
+
+    async def write_gatt_char(self, uuid, data, response=True):
+        self.values[uuid] = bytes(data)
+
+
+def test_written_error_register_is_read_back():
+    # A clock sync clears E10 by writing the error register. The poll that
+    # carries the write must show the register as it is after the write, or
+    # E10 stays on screen for another poll interval.
+    crypto = sys.modules["danfoss_eco.crypto"]
+    e10 = bytes.fromhex("0200000000000000")
+    client = RecordingClient({UUID_ERRORS: crypto.etrv_encode(e10, KEY)})
+    etrv = ble.EtrvClient.__new__(ble.EtrvClient)
+    etrv.address = "00:04:2F:00:00:00"
+    etrv._key = KEY
+
+    async def connect():
+        return client
+
+    etrv._connect = connect
+    saved = ble.WRITE_SETTLE_S
+    ble.WRITE_SETTLE_S = 0
+    try:
+        raw = asyncio.run(
+            etrv.read_state(build_writes=lambda raw: [(UUID_ERRORS, bytes(8))])
+        )
+    finally:
+        ble.WRITE_SETTLE_S = saved
+    assert raw["errors"] == bytes(8)
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

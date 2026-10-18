@@ -55,6 +55,7 @@ _REREAD_KEYS = {
     UUID_TEMPERATURE: "temperature",
     UUID_SETTINGS: "settings",
     UUID_CURRENT_TIME: "time",
+    UUID_ERRORS: "errors",
 }
 _SCHEDULE_UUIDS = (UUID_SCHEDULE_1, UUID_SCHEDULE_2, UUID_SCHEDULE_3)
 
