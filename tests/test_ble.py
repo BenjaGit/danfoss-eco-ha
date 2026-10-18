@@ -190,6 +190,32 @@ def test_read_name_returns_none_when_connect_fails():
     assert asyncio.run(etrv.read_name()) is None
 
 
+
+def test_signal_comes_from_connectable_scanners_only():
+    # A passive scanner (e.g. a Shelly BLU gateway) may hear the valve better
+    # than the proxy that actually connects to it. The signal sensor must show
+    # the link the integration uses, not the best advertisement anywhere.
+    calls = []
+
+    def last_service_info(hass, address, connectable):
+        calls.append(connectable)
+        return types.SimpleNamespace(rssi=-61, source="B8:27:EB:73:3A:1F")
+
+    saved = ble.bluetooth
+    ble.bluetooth = types.SimpleNamespace(async_last_service_info=last_service_info)
+    try:
+        assert ble.last_connectable_signal(None, "00:04:2F:00:00:00") == (
+            -61,
+            "B8:27:EB:73:3A:1F",
+        )
+        ble.bluetooth = types.SimpleNamespace(
+            async_last_service_info=lambda *a, **k: None
+        )
+        assert ble.last_connectable_signal(None, "00:04:2F:00:00:00") == (None, None)
+    finally:
+        ble.bluetooth = saved
+    assert calls == [True]
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):
