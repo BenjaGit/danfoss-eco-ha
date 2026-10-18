@@ -2,6 +2,12 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.3 — fork: signal from the connecting proxy
+
+- The Bluetooth signal sensor (and its `source` attribute) now only uses
+  scanners that can connect. A passive gateway (e.g. Shelly BLU) no longer
+  sets the value, so it reflects the link every poll actually uses.
+
 ## v1.3.0+benjagit.2 — fork: pairing keeps the key
 
 - Pairing no longer fails with "Unknown error" after the key was read. The valve
