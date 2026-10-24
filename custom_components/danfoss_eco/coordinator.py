@@ -248,6 +248,11 @@ class EtrvCoordinator(DataUpdateCoordinator[EtrvState]):
             self.consecutive_failures += 1
             self.last_error = str(err)
             self._arm_retry()
+            # Home Assistant skips the listeners when this update and the previous
+            # one both failed, which froze the connection sensor's attributes at
+            # the first failure. The first failure is left to Home Assistant.
+            if not self.last_update_success:
+                self.async_update_listeners()
             raise UpdateFailed(str(err)) from err
         finally:
             self._polling = False
