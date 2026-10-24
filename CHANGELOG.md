@@ -2,6 +2,13 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.7 — fork: connection sensor follows every retry
+
+- The connection sensor's attributes (consecutive_failures, last_error,
+  last_advertisement) now update on every failed retry. Home Assistant only
+  refreshed entities on the first failure in a row, so a thermostat that
+  failed six times still showed one failure and the first error.
+
 ## v1.3.0+benjagit.6 — fork: E10 clears on the syncing poll
 
 - The error register is read back in the same connection after it is
