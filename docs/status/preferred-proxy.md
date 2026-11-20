@@ -71,3 +71,4 @@
 - Fund: en aflæsning tager 2-4 min, mest kø bag proxyens lås (én connect ad gangen, 6-7 termostater pr. proxy). 1 min poll giver derfor ikke flere forsøg end ca. 3 min. Retry-stigen (60..900 s) er EKSTRA forsøg og er ikke årsagen; min første forklaring til Benjamin var forkert og er rettet over for ham.
 - .17: ét connect-forsøg pr. aflæsning (`CONNECT_ATTEMPTS = 1`). Udgives nu; genstart kræver Benjamins ja.
 - Ikke lavet, foreslået til senere: kø efter hvem der har ventet længst (asyncio.Lock er FIFO).
+- .17 udgivet, installeret (34 filer, md5 ens) og HA genstartet 23:27 med Benjamins ja; `installed_version` v1.3.0-benjagit.17, ingen opstartsfejl. Måling 23:31-00:01 i gang (baggrundsjob): sammenlign med .16 (62/78/72 % ok, 5,1 ok/min, 16 af 18 aflæst inden for 5 min).
