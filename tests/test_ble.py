@@ -63,6 +63,7 @@ def _load(mod: str):
 
 _load("const")
 _load("crypto")
+_load("proxy")
 ble = _load("ble")
 UUID_ERRORS = sys.modules["danfoss_eco.const"].UUID_ERRORS
 KEY = bytes(16)
@@ -144,6 +145,7 @@ def test_missing_pin_characteristic_clears_service_cache():
     etrv.address = "00:04:2F:00:00:00"
     etrv._key = KEY
     etrv._pin = 0
+    etrv._tracker = None
 
     async def establish_connection(*args, **kwargs):
         return client
@@ -215,6 +217,197 @@ def test_signal_comes_from_connectable_scanners_only():
     finally:
         ble.bluetooth = saved
     assert calls == [True]
+
+
+class FakeScanner:
+    def __init__(self, source: str, free: bool = True):
+        self.source = source
+        self.name = f"proxy {source}"
+        self.free = free
+
+
+class FakeManager:
+    """The part of Home Assistant's Bluetooth manager the routing uses."""
+
+    def __init__(self, scanners: list[FakeScanner]):
+        self.scanners = scanners
+
+    def async_scanner_devices_by_address(self, address, connectable):
+        return [
+            types.SimpleNamespace(scanner=scanner, ble_device=object())
+            for scanner in self.scanners
+        ]
+
+
+class FakeHaClient:
+    """Stands in for Home Assistant's client wrapper.
+
+    Like the real one it takes the scanner with the best signal, which the
+    tests place first in the list.
+    """
+
+    def _async_get_backend_for_ble_device(self, manager, scanner, ble_device):
+        return types.SimpleNamespace(scanner=scanner) if scanner.free else None
+
+    def _async_get_best_available_backend_and_device(self, manager):
+        return types.SimpleNamespace(scanner=manager.scanners[0])
+
+
+def _route(source, scanners, choice="learned"):
+    attempts: list[tuple[str, str]] = []
+    saved = ble.BleakClientWithServiceCache
+    ble.BleakClientWithServiceCache = FakeHaClient
+    try:
+        cls = ble.routed_client_class("00:04:2F:00:00:00", source, choice, attempts)
+    finally:
+        ble.BleakClientWithServiceCache = saved
+    backend = cls()._async_get_best_available_backend_and_device(
+        FakeManager(scanners)
+    )
+    return backend.scanner.source, attempts
+
+
+def test_connect_goes_through_the_chosen_scanner():
+    # Home Assistant would take "A" (best signal); the tracker chose "B".
+    used, attempts = _route("B", [FakeScanner("A"), FakeScanner("B")])
+    assert used == "B"
+    assert attempts == [("B", "learned")]
+
+
+def test_chosen_scanner_without_free_slot_falls_back_to_home_assistant():
+    used, attempts = _route("B", [FakeScanner("A"), FakeScanner("B", free=False)])
+    assert used == "A"
+    assert attempts == [("A", "ha")]
+
+
+def test_chosen_scanner_that_is_gone_falls_back_to_home_assistant():
+    used, attempts = _route("C", [FakeScanner("A"), FakeScanner("B")], "locked")
+    assert used == "A"
+    assert attempts == [("A", "ha")]
+
+
+def test_no_choice_leaves_the_scanner_to_home_assistant_and_records_it():
+    used, attempts = _route(None, [FakeScanner("A"), FakeScanner("B")], "ha")
+    assert used == "A"
+    assert attempts == [("A", "ha")]
+
+
+def _connect_with_tracker(outcomes: list[bool], pin_error: Exception | None = None):
+    """Run _connect with a tracker; each outcome is one connect attempt via "B"."""
+    proxy = sys.modules["danfoss_eco.proxy"]
+    tracker = proxy.ProxyTracker(rng=lambda: 0.99)
+    for _ in range(proxy.MIN_ATTEMPTS):
+        tracker.record("B", True)
+    before = tracker.stats["B"].attempts
+
+    class PinClient(FakeClient):
+        async def write_gatt_char(self, uuid, data, response=True):
+            if pin_error is not None:
+                raise pin_error
+
+    async def establish_connection(client_class, device, name, max_attempts):
+        client = client_class()
+        manager = FakeManager([FakeScanner("A"), FakeScanner("B")])
+        for ok in outcomes:
+            client._async_get_best_available_backend_and_device(manager)
+            if ok:
+                return PinClient(set())
+        raise BleakError("failed to connect")
+
+    async def close_stale(address):
+        pass
+
+    patched = {
+        "bluetooth": types.SimpleNamespace(
+            async_ble_device_from_address=lambda *a, **k: object()
+        ),
+        "establish_connection": establish_connection,
+        "close_stale_connections_by_address": close_stale,
+        "advert_ages": lambda hass, address: {"A": 1.0, "B": 2.0},
+        "BleakClientWithServiceCache": FakeHaClient,
+    }
+    etrv = ble.EtrvClient(None, "00:04:2F:00:00:00", KEY, 0, tracker)
+    saved = {name: getattr(ble, name) for name in patched}
+    error = None
+    try:
+        for name, value in patched.items():
+            setattr(ble, name, value)
+        asyncio.run(etrv._connect())
+    except ble.EtrvError as err:
+        error = err
+    finally:
+        for name, value in saved.items():
+            setattr(ble, name, value)
+    stats = tracker.stats["B"]
+    return stats.attempts - before, stats.successes - before, tracker, error
+
+
+def test_successful_connect_is_counted_for_the_scanner_used():
+    attempts, successes, tracker, error = _connect_with_tracker([True])
+    assert error is None
+    assert (attempts, successes) == (1, 1)
+    assert (tracker.last_source, tracker.last_choice) == ("B", "learned")
+    assert "A" not in tracker.stats
+
+
+def test_retry_inside_one_connect_counts_the_failed_attempt_too():
+    attempts, successes, _, error = _connect_with_tracker([False, True])
+    assert error is None
+    assert (attempts, successes) == (2, 1)
+
+
+def test_failed_connect_counts_every_attempt_as_failed():
+    attempts, successes, tracker, error = _connect_with_tracker([False, False])
+    assert isinstance(error, ble.EtrvError)
+    assert (attempts, successes) == (2, 0)
+    assert tracker.stats["B"].consecutive_failures == 2
+
+
+def test_link_that_dies_before_the_first_write_counts_as_failed():
+    attempts, successes, _, error = _connect_with_tracker(
+        [True], pin_error=BleakError("Not connected")
+    )
+    assert isinstance(error, ble.EtrvError)
+    assert (attempts, successes) == (1, 0)
+
+
+def test_stale_service_table_is_not_held_against_the_scanner():
+    attempts, successes, _, error = _connect_with_tracker(
+        [True], pin_error=BleakCharacteristicNotFoundError("not found")
+    )
+    assert isinstance(error, ble.EtrvCharacteristicMissing)
+    assert (attempts, successes) == (1, 1)
+
+
+def test_advert_ages_come_from_each_connectable_scanner():
+    now = ble.time.monotonic()
+
+    def scanner(source, seen):
+        return types.SimpleNamespace(
+            scanner=types.SimpleNamespace(
+                source=source,
+                discovered_device_timestamps=(
+                    {} if seen is None else {"00:04:2F:00:00:00": seen}
+                ),
+            )
+        )
+
+    calls = []
+
+    def devices(hass, address, connectable):
+        calls.append(connectable)
+        return [scanner("A", now - 30), scanner("B", now - 900), scanner("C", None)]
+
+    saved = ble.bluetooth
+    ble.bluetooth = types.SimpleNamespace(async_scanner_devices_by_address=devices)
+    try:
+        ages = ble.advert_ages(None, "00:04:2F:00:00:00")
+    finally:
+        ble.bluetooth = saved
+    assert calls == [True]
+    assert 29 < ages["A"] < 32
+    assert 899 < ages["B"] < 902
+    assert ages["C"] == 0.0
 
 
 class RecordingClient(FakeClient):

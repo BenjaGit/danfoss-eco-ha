@@ -78,7 +78,11 @@
           "pin": "Geräte-PIN (0 = keine)",
           "auto_time_sync": "Geräteuhr automatisch synchronisieren",
           "cache_ttl_hours": "Letzten Messwert behalten für (Stunden, 0 = unbegrenzt)",
-          "queue_ttl_hours": "Nicht zugestellte Befehle behalten für (Stunden, 0 = unbegrenzt)"
+          "queue_ttl_hours": "Nicht zugestellte Befehle behalten für (Stunden, 0 = unbegrenzt)",
+          "preferred_proxy": "Bevorzugter Bluetooth-Proxy"
+        },
+        "data_description": {
+          "preferred_proxy": "Über diesen Proxy verbinden, wenn er den Thermostat in den letzten 10 Minuten gehört hat. Automatisch nutzt den Proxy mit der besten Verbindungsquote."
         }
       }
     }

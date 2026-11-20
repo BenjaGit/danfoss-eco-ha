@@ -78,7 +78,11 @@
           "pin": "Enhedens PIN (0 = ingen)",
           "auto_time_sync": "Synkroniser enhedens ur automatisk",
           "cache_ttl_hours": "Behold seneste aflæsning i (timer, 0 = for altid)",
-          "queue_ttl_hours": "Behold uleverede kommandoer i (timer, 0 = for altid)"
+          "queue_ttl_hours": "Behold uleverede kommandoer i (timer, 0 = for altid)",
+          "preferred_proxy": "Foretrukken proxy"
+        },
+        "data_description": {
+          "preferred_proxy": "Forbind gennem denne proxy, når den har hørt termostaten inden for 10 minutter. Automatisk bruger den proxy, der oftest får forbindelse."
         }
       }
     }

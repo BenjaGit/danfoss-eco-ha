@@ -191,7 +191,7 @@ The main thermostat.
 | Entity | Meaning |
 |---|---|
 | `binary_sensor.<name>_problem` | `on` if any device error flag is set. Its attributes break out the individual flags: `e9_valve_does_not_close`, `e10_invalid_time`, `e14_low_battery`, `e15_very_low_battery`. |
-| `binary_sensor.<name>_connection` | `on` while the radio link is actually working. Because the other entities keep showing cached values when a poll fails, **this is the entity to alert on**. Attributes: `last_success`, `last_advertisement`, `consecutive_failures`, `last_error`, `showing_cached_data`. Stays available when the device is not. |
+| `binary_sensor.<name>_connection` | `on` while the radio link is actually working. Because the other entities keep showing cached values when a poll fails, **this is the entity to alert on**. Attributes: `last_success`, `last_advertisement`, `consecutive_failures`, `last_error`, `showing_cached_data`, plus the proxy attributes described under [Preferred proxy](#preferred-proxy). Stays available when the device is not. |
 
 The famous **E10 (invalid time)** appears after a battery change, because the clock
 resets. This integration fixes it automatically — see [Time sync](#time-sync-button--service).
@@ -248,7 +248,43 @@ Open the device's integration entry → **Configure**:
 | **Keep the last reading for (hours)** | 24 | How long cached values stay on show after polls start failing. `0` = keep them indefinitely. See [section 11](#11-offline-behaviour-cached-readings--queued-commands). |
 | **Keep undelivered commands for (hours)** | 24 | How long a queued command waits for the thermostat to reappear before being discarded. `0` = wait indefinitely. |
 
+| **Preferred Bluetooth proxy** | Automatic | Which Bluetooth adapter or proxy to connect through. See below. |
+
 Changing options reloads the entry (a brief reconnect).
+
+### Preferred proxy
+
+Home Assistant connects through the scanner with the strongest signal and a free
+slot. For these valves signal strength is a poor guide: measured over 17 000
+connects in one home, a connect through a thermostat's best proxy succeeded 29 % of
+the time and through any other proxy 8 %.
+
+With **Automatic**, the integration counts successful and failed connects per
+scanner for each thermostat and connects through the one with the best record:
+
+- A scanner is used once it has 5 counted connects. Until then Home Assistant
+  chooses, which is also how the counting starts.
+- The scanner must have heard a connectable advertisement from the thermostat
+  within the last 10 minutes.
+- About 1 connect in 10 is left to Home Assistant, so the other scanners keep
+  being tried and the choice can change when a proxy is moved.
+- After 3 failed connects in a row a scanner is rested for 30 minutes.
+- When no scanner qualifies, Home Assistant chooses as before.
+
+Selecting a proxy in the options locks the thermostat to it. The lock overrides the
+learned choice and is never left to Home Assistant at random, but the 10-minute
+and 3-failures rules still apply, and then Home Assistant chooses.
+
+The connection binary sensor shows the result:
+
+| Attribute | Meaning |
+|---|---|
+| `proxy` | The scanner the latest connect went through. |
+| `proxy_choice` | Who chose it: `learned`, `locked` or `ha`. |
+| `preferred_proxy` | The locked scanner, if one is set. |
+| `proxy_stats` | Per scanner: `attempts`, `successes`, `success_rate` and `benched` (resting after 3 failures in a row). |
+
+Pairing always uses Home Assistant's choice.
 
 ### Updating the secret key or PIN (reconfigure)
 

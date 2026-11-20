@@ -71,6 +71,7 @@ if "danfoss_eco.coordinator" not in sys.modules:
         EtrvClient=object,
         EtrvError=EtrvError,
         last_connectable_signal=lambda *a: (None, None),
+        scanner_name=lambda hass, source: source,
     )
 
     def _load(name: str):
@@ -108,6 +109,7 @@ def _coordinator(previous_update_success: bool):
     c.notified = 0
     c._expire_pending = lambda: None
     c._arm_retry = lambda: None
+    c._schedule_save = lambda: None
 
     def notify():
         c.notified += 1

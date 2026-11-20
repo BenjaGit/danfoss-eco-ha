@@ -16,8 +16,20 @@ from homeassistant.config_entries import (
     OptionsFlow,
 )
 from homeassistant.core import callback
+from homeassistant.helpers.selector import (
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
-from .ble import EtrvButtonNotPressed, EtrvClient, EtrvError, EtrvNotFoundError
+from .ble import (
+    EtrvButtonNotPressed,
+    EtrvClient,
+    EtrvError,
+    EtrvNotFoundError,
+    connectable_scanners,
+)
 from homeassistant.const import CONF_ADDRESS
 
 from .const import (
@@ -25,6 +37,7 @@ from .const import (
     CONF_CACHE_TTL,
     CONF_PIN,
     CONF_POLL_INTERVAL,
+    CONF_PREFERRED_PROXY,
     CONF_QUEUE_TTL,
     CONF_SECRET_KEY,
     DANFOSS_OUI,
@@ -35,6 +48,7 @@ from .const import (
     DEFAULT_QUEUE_TTL_HOURS,
     DOMAIN,
 )
+from .proxy import AUTO
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -282,6 +296,17 @@ class DanfossEcoOptionsFlow(OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(data=user_input)
         opts = self.config_entry.options
+        # Every scanner that can connect, plus a locked one that is offline
+        # right now, so opening the form does not silently drop the lock.
+        scanners = connectable_scanners(self.hass)
+        locked = opts.get(CONF_PREFERRED_PROXY, AUTO)
+        if locked != AUTO:
+            scanners.setdefault(locked, locked)
+        automatic = "Automatisk" if self.hass.config.language == "da" else "Automatic"
+        proxy_options = [SelectOptionDict(value=AUTO, label=automatic)] + [
+            SelectOptionDict(value=source, label=name)
+            for source, name in sorted(scanners.items(), key=lambda item: item[1])
+        ]
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
@@ -309,6 +334,13 @@ class DanfossEcoOptionsFlow(OptionsFlow):
                         CONF_QUEUE_TTL,
                         default=opts.get(CONF_QUEUE_TTL, DEFAULT_QUEUE_TTL_HOURS),
                     ): vol.All(int, vol.Range(min=0, max=720)),
+                    vol.Required(
+                        CONF_PREFERRED_PROXY, default=locked
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=proxy_options, mode=SelectSelectorMode.DROPDOWN
+                        )
+                    ),
                 }
             ),
         )
