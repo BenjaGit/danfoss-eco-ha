@@ -2,6 +2,12 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.11 — fork: a resting proxy hands over to Home Assistant
+
+- When a thermostat's best scanner is resting after 8 failures, Home Assistant
+  chooses. Before, the next-best scanner was forced even with a record like
+  0 of 48, and was then rested in turn.
+
 ## v1.3.0+benjagit.10 — fork: parallel connections, proxy on the dashboard
 
 - Connections are now serialized per scanner instead of for the whole home, so

@@ -268,7 +268,8 @@ scanner for each thermostat and connects through the one with the best record:
   within the last 10 minutes.
 - About 1 connect in 10 is left to Home Assistant, so the other scanners keep
   being tried and the choice can change when a proxy is moved.
-- After 8 failed connects in a row a scanner is rested for 30 minutes.
+- After 8 failed connects in a row a scanner is rested for 30 minutes, and Home
+  Assistant chooses meanwhile.
 - When no scanner qualifies, Home Assistant chooses as before.
 
 Selecting a proxy in the options locks the thermostat to it. The lock overrides the

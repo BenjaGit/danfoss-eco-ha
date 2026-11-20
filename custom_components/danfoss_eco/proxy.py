@@ -107,18 +107,14 @@ class ProxyTracker:
 
         Same as choose, minus the occasional connect left to Home Assistant.
         """
-        usable = [
-            source
-            for source, age in heard.items()
-            if age <= RECENT_ADVERT_S and not self.is_benched(source)
-        ]
+        recent = [source for source, age in heard.items() if age <= RECENT_ADVERT_S]
         if self.locked is not None:
-            if self.locked in usable:
+            if self.locked in recent and not self.is_benched(self.locked):
                 return self.locked, CHOICE_LOCKED
             return None, CHOICE_HA
         proven = [
             source
-            for source in usable
+            for source in recent
             if source in self.stats and self.stats[source].attempts >= MIN_ATTEMPTS
         ]
         if not proven:
@@ -126,6 +122,11 @@ class ProxyTracker:
         best = max(
             proven, key=lambda s: (self.stats[s].rate, self.stats[s].attempts, s)
         )
+        # A resting best scanner hands the choice to Home Assistant, not to
+        # the runner-up. Seen on a valve with records 13/49, 1/49 and 0/48:
+        # the runner-ups were tried in turn until all three were resting.
+        if self.is_benched(best):
+            return None, CHOICE_HA
         return best, CHOICE_LEARNED
 
     # ----------------------------------------------------------- records ----
