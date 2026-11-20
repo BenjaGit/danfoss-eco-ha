@@ -2,6 +2,16 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.14 — fork: scanners are mapped, not found by chance
+
+- Exploring connects now go to the scanner with the fewest counted connects
+  for the thermostat. They went to the scanner with the strongest signal, so a
+  scanner that was neither the best nor the loudest was never measured.
+- While a scanner that hears the thermostat is unmapped (under 20 connects,
+  or under 10 without a success), half the connects go to mapping it. After
+  that the share is 1 in 10 as before.
+- `proxy_choice` can be `explore`, and `proxy_stats` has `mapped` per scanner.
+
 ## v1.3.0+benjagit.13 — fork: signal from the proxy that read
 
 - The Bluetooth signal sensor (and its `source`) now shows the signal at the

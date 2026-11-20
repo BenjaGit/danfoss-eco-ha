@@ -59,23 +59,94 @@ def test_few_lucky_attempts_do_not_beat_a_long_good_record():
     assert tracker.stats[P1].rate < tracker.stats[P2].rate
 
 
-def test_one_in_ten_connects_is_left_to_home_assistant():
-    records = {P1: (20, 9), P2: (20, 2)}
-    assert _tracker(roll=0.05, records=records).choose(HEARD) == (
-        None,
-        proxy.CHOICE_HA,
+MAPPED = {P1: (60, 25), P2: (30, 3), NUC: (22, 4)}
+
+
+def test_one_in_ten_connects_goes_to_the_least_tried_scanner_once_mapped():
+    assert _tracker(roll=0.05, records=MAPPED).choose(HEARD) == (
+        NUC,
+        proxy.CHOICE_EXPLORE,
     )
-    assert _tracker(roll=0.10, records=records).choose(HEARD)[0] == P1
+    assert _tracker(roll=0.10, records=MAPPED).choose(HEARD) == (
+        P1,
+        proxy.CHOICE_LEARNED,
+    )
     rolls = iter(i / 1000 for i in range(1000))
     tracker = proxy.ProxyTracker(rng=lambda: next(rolls))
-    tracker.stats[P1] = proxy.ProxyStats(20, 9)
-    left_to_ha = sum(tracker.choose(HEARD)[0] is None for _ in range(1000))
-    assert left_to_ha == 100
+    for source, (attempts, successes) in MAPPED.items():
+        tracker.stats[source] = proxy.ProxyStats(attempts, successes)
+    explored = sum(
+        tracker.choose(HEARD)[1] == proxy.CHOICE_EXPLORE for _ in range(1000)
+    )
+    assert explored == 100
 
 
-def test_assignment_is_the_choice_without_the_random_connects():
-    tracker = _tracker(roll=0.0, records={P1: (20, 9), P2: (20, 2)})
-    assert tracker.choose(HEARD) == (None, proxy.CHOICE_HA)
+def test_half_the_connects_map_a_scanner_that_is_not_yet_judged():
+    # The NUC hears the valve but has only 3 counted connects.
+    records = {P1: (60, 25), P2: (30, 3), NUC: (3, 1)}
+    assert _tracker(roll=0.49, records=records).choose(HEARD) == (
+        NUC,
+        proxy.CHOICE_EXPLORE,
+    )
+    assert _tracker(roll=0.50, records=records).choose(HEARD)[0] == P1
+    # A scanner with no record at all is unmapped too.
+    assert _tracker(roll=0.3, records={P1: (60, 25), P2: (30, 3)}).choose(
+        HEARD
+    ) == (NUC, proxy.CHOICE_EXPLORE)
+
+
+def test_mapping_takes_the_least_tried_unmapped_scanner_first():
+    records = {P1: (60, 25), P2: (12, 1), NUC: (7, 2)}
+    tracker = _tracker(roll=0.3, records=records)
+    assert tracker.choose(HEARD)[0] == NUC
+    for _ in range(6):
+        tracker.record(NUC, False)
+    # NUC is at 13 now, P2 at 12.
+    assert tracker.choose(HEARD)[0] == P2
+
+
+def test_mapping_ends_when_every_scanner_is_judged():
+    records = {P1: (60, 25), P2: (30, 3), NUC: (proxy.MAP_ATTEMPTS - 1, 4)}
+    tracker = _tracker(roll=0.3, records=records)
+    assert tracker.choose(HEARD) == (NUC, proxy.CHOICE_EXPLORE)
+    tracker.record(NUC, False)
+    assert tracker.is_mapped(NUC)
+    # Back to one in ten: a roll of 0.3 no longer explores.
+    assert tracker.choose(HEARD) == (P1, proxy.CHOICE_LEARNED)
+
+
+def test_scanner_without_a_single_success_is_written_off_early():
+    records = {P1: (60, 25), P2: (30, 3), NUC: (proxy.MAP_GIVE_UP - 1, 0)}
+    tracker = _tracker(roll=0.3, records=records)
+    assert not tracker.is_mapped(NUC)
+    tracker.stats[NUC].attempts += 1
+    assert tracker.is_mapped(NUC)
+    # One success in ten is not written off.
+    tracker.stats[NUC].successes = 1
+    assert not tracker.is_mapped(NUC)
+
+
+def test_mapping_skips_scanners_that_do_not_hear_or_are_resting():
+    records = {P1: (60, 25), P2: (30, 3)}
+    tracker = _tracker(roll=0.3, records=records)
+    # The NUC has not heard the valve for 10 minutes: nothing to map.
+    heard = {P1: 5.0, P2: 5.0, NUC: proxy.RECENT_ADVERT_S + 1}
+    assert tracker.choose(heard) == (P1, proxy.CHOICE_LEARNED)
+    # A resting scanner is not mapped meanwhile.
+    for _ in range(proxy.MAX_CONSECUTIVE_FAILURES):
+        tracker.record(NUC, False)
+    tracker.stats[NUC].successes = 1
+    assert not tracker.is_mapped(NUC) and tracker.is_benched(NUC)
+    assert tracker.choose(HEARD) == (P1, proxy.CHOICE_LEARNED)
+
+
+def test_nothing_heard_leaves_exploring_to_home_assistant():
+    assert _tracker(roll=0.0).choose({}) == (None, proxy.CHOICE_HA)
+
+
+def test_assignment_is_the_choice_without_the_exploring_connects():
+    tracker = _tracker(roll=0.0, records=MAPPED)
+    assert tracker.choose(HEARD) == (NUC, proxy.CHOICE_EXPLORE)
     assert tracker.assigned(HEARD) == (P1, proxy.CHOICE_LEARNED)
 
 
@@ -205,8 +276,20 @@ def test_unreadable_saved_records_are_skipped():
 def test_summary_shows_the_plain_rate_per_scanner():
     tracker = _tracker(records={P1: (20, 9), P2: (0, 0)})
     assert tracker.summary() == {
-        P2: {"attempts": 0, "successes": 0, "success_rate": None, "benched": False},
-        P1: {"attempts": 20, "successes": 9, "success_rate": 0.45, "benched": False},
+        P2: {
+            "attempts": 0,
+            "successes": 0,
+            "success_rate": None,
+            "benched": False,
+            "mapped": False,
+        },
+        P1: {
+            "attempts": 20,
+            "successes": 9,
+            "success_rate": 0.45,
+            "benched": False,
+            "mapped": True,
+        },
     }
 
 

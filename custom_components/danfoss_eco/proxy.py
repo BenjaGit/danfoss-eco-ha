@@ -6,8 +6,9 @@ connect through a thermostat's best proxy succeeded 29 % of the time and
 through any other only 8 %, and signal strength did not tell them apart.
 
 So the outcome of every connect is counted per scanner, and the scanner with
-the best record is used. Now and then Home Assistant chooses instead, which
-keeps the counts of the other scanners alive. A proxy can also be locked in
+the best record is used. Some connects go to the scanner with the fewest
+counted attempts instead: half of them while a scanner is still unmapped for
+the thermostat, one in ten after that, which keeps every record current. A proxy can also be locked in
 the options; a locked thermostat never connects through anything else.
 
 Nothing here imports Home Assistant, so the rules can be tested on their own.
@@ -26,13 +27,23 @@ AUTO = "auto"
 CHOICE_LEARNED = "learned"
 CHOICE_LOCKED = "locked"
 CHOICE_HA = "ha"
+CHOICE_EXPLORE = "explore"
 
 # A scanner is only used if it heard a connectable advertisement this recently.
 RECENT_ADVERT_S = 600
 # A scanner needs this many counted connects before its record is trusted.
 MIN_ATTEMPTS = 5
-# Share of connects left to Home Assistant, so other scanners keep being tried.
+# Share of connects that go to the scanner with the fewest counted attempts,
+# so every scanner keeps being measured.
 EXPLORE_RATE = 0.1
+# While a scanner that hears the thermostat is still unmapped, this share goes
+# to the least-tried unmapped scanner instead. A scanner is mapped after
+# MAP_ATTEMPTS connects, or after MAP_GIVE_UP connects without one success:
+# good pairs connect 30-45 % of the time, so 10 failures in a row all but
+# rule one out.
+MAP_RATE = 0.5
+MAP_ATTEMPTS = 20
+MAP_GIVE_UP = 10
 # After this many failures in a row a scanner is rested for BENCH_S, then
 # tried once more; another failure rests it again. Even a thermostat's best
 # proxy only connects about 3 times in 10, so 3 or 4 failures in a row are
@@ -98,14 +109,38 @@ class ProxyTracker:
         latest advertisement from the thermostat. Returns (scanner, who chose
         it); the scanner is None when Home Assistant is to choose.
         """
-        if self.locked is None and self._rng() < EXPLORE_RATE:
+        if self.locked is not None:
+            return self.locked, CHOICE_LOCKED
+        candidates = [
+            source
+            for source, age in heard.items()
+            if age <= RECENT_ADVERT_S and not self.is_benched(source)
+        ]
+        unmapped = [source for source in candidates if not self.is_mapped(source)]
+        if self._rng() < (MAP_RATE if unmapped else EXPLORE_RATE):
+            pool = unmapped or candidates
+            if pool:
+                return min(pool, key=lambda s: (self._attempts(s), s)), CHOICE_EXPLORE
             return None, CHOICE_HA
         return self.assigned(heard)
+
+    def _attempts(self, source: str) -> int:
+        stats = self.stats.get(source)
+        return stats.attempts if stats is not None else 0
+
+    def is_mapped(self, source: str) -> bool:
+        """Whether this scanner has been tried enough to be judged."""
+        stats = self.stats.get(source)
+        if stats is None:
+            return False
+        if stats.attempts >= MAP_ATTEMPTS:
+            return True
+        return stats.attempts >= MAP_GIVE_UP and stats.successes == 0
 
     def assigned(self, heard: Mapping[str, float]) -> tuple[str | None, str]:
         """The scanner the thermostat is assigned to right now.
 
-        Same as choose, minus the occasional connect left to Home Assistant.
+        Same as choose, minus the connects spent on measuring other scanners.
         """
         # A lock is absolute. If the locked scanner cannot reach the
         # thermostat the connect fails; it never moves to another scanner,
@@ -187,6 +222,7 @@ class ProxyTracker:
                     round(s.successes / s.attempts, 2) if s.attempts else None
                 ),
                 "benched": self.is_benched(source),
+                "mapped": self.is_mapped(source),
             }
             for source, s in sorted(self.stats.items())
         }
