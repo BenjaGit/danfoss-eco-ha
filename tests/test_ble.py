@@ -177,6 +177,61 @@ def test_missing_pin_characteristic_clears_service_cache():
     assert client.disconnected
 
 
+def _connect_with_failing_pin_write(error: BaseException) -> tuple[FakeClient, BaseException | None]:
+    client = FakeClient(set())
+
+    async def write_gatt_char(uuid, data, response=True):
+        raise error
+
+    client.write_gatt_char = write_gatt_char
+    etrv = ble.EtrvClient.__new__(ble.EtrvClient)
+    etrv.address = "00:04:2F:00:00:00"
+    etrv._key = KEY
+    etrv._pin = 0
+    etrv._tracker = None
+    etrv._hass = None
+
+    async def establish_connection(*args, **kwargs):
+        return client
+
+    async def close_stale(address):
+        pass
+
+    patched = {
+        "bluetooth": types.SimpleNamespace(
+            async_ble_device_from_address=lambda *a, **k: object()
+        ),
+        "establish_connection": establish_connection,
+        "close_stale_connections_by_address": close_stale,
+    }
+    saved = {name: getattr(ble, name) for name in patched}
+    raised: BaseException | None = None
+    try:
+        for name, value in patched.items():
+            setattr(ble, name, value)
+        asyncio.run(etrv._connect())
+    except BaseException as err:  # noqa: BLE001 - the test inspects it
+        raised = err
+    finally:
+        for name, value in saved.items():
+            setattr(ble, name, value)
+    return client, raised
+
+
+def test_pin_write_timeout_closes_the_link():
+    # Seen on real hardware: three valves stayed connected to a proxy for over
+    # an hour, silent to every scanner, after a connect nobody closed.
+    client, raised = _connect_with_failing_pin_write(TimeoutError("no reply"))
+    assert isinstance(raised, ble.EtrvError), raised
+    assert client.disconnected
+
+
+def test_cancelled_pin_write_closes_the_link():
+    client, raised = _connect_with_failing_pin_write(asyncio.CancelledError())
+    assert isinstance(raised, asyncio.CancelledError), raised
+    assert client.disconnected
+
+
 def test_read_name_returns_none_when_connect_fails():
     # Seen on real hardware during pairing: the key read succeeds, the valve
     # drops the link, and the follow-up connection for the name fails. That
@@ -535,15 +590,20 @@ def test_connect_left_to_home_assistant_queues_behind_the_strongest_scanner():
         ]
     )
     try:
-        # No records yet: nothing is proven, so Home Assistant chooses.
-        assert ble.route(None, "00:04:2F:00:00:00", proxy.ProxyTracker()) == (
+        # No records yet: nothing is proven, so Home Assistant chooses. The
+        # draw is fixed above the mapping share; a lower one would send this
+        # connect to an unmapped scanner instead.
+        def tracker():
+            return proxy.ProxyTracker(rng=lambda: 0.99)
+
+        assert ble.route(None, "00:04:2F:00:00:00", tracker()) == (
             "B",
             "ha",
         )
         ble.bluetooth = types.SimpleNamespace(
             async_scanner_devices_by_address=lambda *a: []
         )
-        assert ble.route(None, "00:04:2F:00:00:00", proxy.ProxyTracker()) == (
+        assert ble.route(None, "00:04:2F:00:00:00", tracker()) == (
             None,
             "ha",
         )

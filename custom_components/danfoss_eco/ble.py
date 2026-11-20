@@ -322,8 +322,24 @@ class EtrvClient:
             self._count(attempts, connected=False)
             await client.disconnect()
             raise EtrvError(f"PIN write failed: {err}") from err
+        except BaseException as err:
+            # A timeout or a cancelled poll. The link is open and nobody else
+            # holds the client, so it has to be closed here: an open link
+            # stops the valve advertising and keeps a slot on the proxy.
+            self._count(attempts, connected=False)
+            await self._close_quietly(client)
+            if isinstance(err, TimeoutError):
+                raise EtrvError(f"PIN write timed out: {err}") from err
+            raise
         self._count(attempts, connected=True)
         return client
+
+    async def _close_quietly(self, client) -> None:
+        """Disconnect on the way out of a failure, without hiding its cause."""
+        try:
+            await client.disconnect()
+        except Exception as err:  # noqa: BLE001 - best effort
+            _LOGGER.debug("%s: disconnect failed: %s", self.address, err)
 
     def _count(self, attempts: list[tuple[str, str]], *, connected: bool) -> None:
         """Count this connect once against each scanner it went through.

@@ -22,3 +22,10 @@
 - Fund: NUC'en er bedst for køkken (17/23), trappeopgang (20/35) og makerspace (12/23).
 - bt-proxy-forsøgene på Pi'erne er ikke rørt, men målingen 21/11 kan ikke sammenlignes med
   baseline pr. Pi (proxy-valg, parallelle forbindelser og 1-minuts-interval er ændret).
+
+## Hængende forbindelser (20/11 20:45)
+
+- bt-proxy-1 holdt forbindelser til kontor 2 (fra 19:09:52), lager (19:11:02) og gæstetoilet (20:15:44), som aldrig blev lukket. Termostaterne annoncerer ikke imens ("not seen by any Bluetooth adapter/proxy"), kontor 2 lyser konstant rødt.
+- Opgave sendt til bt-proxy-agenten (Herdr `bt-proxy`, svar kommer til pane wK:p1): find årsagen på Pi-siden og luk de tre uden genstart, hvis muligt.
+- Vores side: `_connect` lukkede ikke forbindelsen, når PIN-skrivningen løb ud eller blev annulleret. Rettet på grenen `fix/close-link-on-pin-timeout` (ikke udgivet, ikke deployet). Udgivelse som .15 kræver HA-genstart: spørg Benjamin.
+- Ikke bekræftet, at det var PIN-skrivningen, der udløste de tre: HA's log for tidspunktet er ikke læst (HAOS logger til journalen, ikke til /config).
