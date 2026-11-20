@@ -36,3 +36,10 @@
 - bt-proxy v1.0.3-benjagit.9 (lukker et link uden GATT-aktivitet efter 60 s) er pushet, IKKE deployet: venter på Benjamins ja i bt-proxy-fanen.
 - HA's log: kl. 19:09:46.551 meldte koordinatoren "Error fetching" for kontor 2, samme øjeblik Pi'en startede det forsøg, der lykkedes 19:09:52. HA fik altså en fejl for forsøget og havde ingen klient at lukke; hverken annullering eller PIN-timeout. Rettelsen på `fix/close-link-on-pin-timeout` er derfor ikke årsagen til de tre, kun et lukket hul.
 - bt-proxy foreslår også: lad den samlede timeout dække to forsøg à 17 s (ca. 35 s). Ikke gjort.
+
+### .15 (20/11 ca. 22:00)
+
+- Udgivet: lukning ved PIN-timeout/annullering, 40 s ventetid på connect, nyt valg efter køen. Valg-før-kø er dermed rettet.
+- Deploy til HA kræver genstart: spørg Benjamin. Efter genstart: md5-tjek, og mål 30 min mod tallene før (40 min før 21:40: bt-proxy-1 197 forsøg/62 ok, -2 180/66, -3 135/34).
+- bt-proxy-agenten laver samtidig: connect-grænse 15 -> ca. 30 s og straks-genforsøg ved "dropped the link". Svar kommer til pane wK:p1.
+- Poll-interval stadig 1 min; sættes ned efter målingen (Benjamin beslutter værdien).

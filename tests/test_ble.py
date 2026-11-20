@@ -547,8 +547,9 @@ def _run_two_reads(route_a: str, route_b: str) -> int:
         return etrv
 
     routes = {"00:04:2F:00:00:01": route_a, "00:04:2F:00:00:02": route_b}
-    saved = ble.route
+    saved = ble.route, ble.advert_ages
     ble.route = lambda hass, address, tracker: (routes[address], "learned")
+    ble.advert_ages = lambda hass, address: {routes[address]: 0.0}
     try:
 
         async def both():
@@ -556,9 +557,86 @@ def _run_two_reads(route_a: str, route_b: str) -> int:
 
         asyncio.run(both())
     finally:
-        ble.route = saved
+        ble.route, ble.advert_ages = saved
         ble._BLE_LOCKS.clear()
     return state["peak"]
+
+
+def _queue_behind_a(choice: str, heard_after_wait: dict, second_route: tuple):
+    """A valve waits for scanner A's turn; returns the route it connects by.
+
+    `heard_after_wait` is what the scanners hear once the turn comes, and
+    `second_route` what a new choice would give then.
+    """
+    proxy = sys.modules["danfoss_eco.proxy"]
+    etrv = ble.EtrvClient(None, "00:04:2F:00:00:02", KEY, 0, proxy.ProxyTracker())
+    answers = [("A", choice), second_route]
+    saved = ble.route, ble.advert_ages
+    ble.route = lambda hass, address, tracker: answers.pop(0) if len(answers) > 1 else answers[0]
+    ble.advert_ages = lambda hass, address: heard_after_wait
+    try:
+
+        async def run():
+            busy = ble._lock_for("A")
+            await busy.acquire()
+
+            async def waiting():
+                async with etrv._slot():
+                    return etrv._route, ble._lock_for("B").locked()
+
+            task = asyncio.ensure_future(waiting())
+            await asyncio.sleep(0.01)
+            busy.release()
+            return await task
+
+        return asyncio.run(run())
+    finally:
+        ble.route, ble.advert_ages = saved
+        ble._BLE_LOCKS.clear()
+
+
+def test_scanner_that_lost_the_valve_while_queueing_is_replaced():
+    # Seen on real hardware, about 1 connect in 10: the chosen proxy no longer
+    # heard the valve when its turn came, Home Assistant picked another one,
+    # and two valves dialled out through the same proxy.
+    route, holds_b = _queue_behind_a("learned", {"B": 0.0}, ("B", "ha"))
+    assert route == ("B", "ha")
+    assert holds_b
+
+
+def test_scanner_that_still_hears_the_valve_is_kept_after_queueing():
+    route, holds_b = _queue_behind_a("learned", {"A": 5.0, "B": 0.0}, ("B", "ha"))
+    assert route == ("A", "learned")
+    assert not holds_b
+
+
+def test_locked_scanner_is_kept_after_queueing_even_if_it_lost_the_valve():
+    route, holds_b = _queue_behind_a("locked", {"B": 0.0}, ("B", "ha"))
+    assert route == ("A", "locked")
+    assert not holds_b
+
+
+def test_connect_waits_longer_than_the_default_twenty_seconds():
+    # bleak-retry-connector passes timeout=20; a good connect takes 9-14 s
+    # and the proxies now allow about 30.
+    seen = {}
+
+    class Base:
+        async def connect(self, **kwargs):
+            seen.update(kwargs)
+
+    saved = ble.BleakClientWithServiceCache
+    ble.BleakClientWithServiceCache = Base
+    try:
+        cls = ble.routed_client_class("00:04:2F:00:00:00", "A", "learned", [])
+        asyncio.run(cls().connect(timeout=20.0, dangerous_use_bleak_cache=True))
+    finally:
+        ble.BleakClientWithServiceCache = saved
+    assert seen == {
+        "timeout": ble.CONNECT_TIMEOUT_S,
+        "dangerous_use_bleak_cache": True,
+    }
+    assert ble.CONNECT_TIMEOUT_S > 30
 
 
 def test_thermostats_on_different_scanners_are_read_side_by_side():

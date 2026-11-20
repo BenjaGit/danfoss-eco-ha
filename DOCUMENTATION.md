@@ -313,6 +313,12 @@ roughly a quarter.
 A connect that is left to Home Assistant goes through the scanner with the
 strongest signal, so that it too can wait in that scanner's queue.
 
+When a connect's turn comes, the scanner may no longer hear the thermostat. The
+choice is then made again and the connect joins the new scanner's queue. A locked
+proxy is kept regardless.
+
+A connect waits up to 40 s for the scanner to answer. Good connects take 9-14 s.
+
 ### Updating the secret key or PIN (reconfigure)
 
 If a device's key changes (e.g. you re-paired it in the Danfoss app) or you set a PIN
