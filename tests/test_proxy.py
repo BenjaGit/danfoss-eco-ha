@@ -127,14 +127,15 @@ def test_failures_in_a_row_rest_the_scanner_then_give_it_one_more_try():
     assert tracker.choose(HEARD)[0] == P1
     tracker.record(P1, False)
     assert tracker.is_benched(P1)
-    assert tracker.choose(HEARD) == (P2, proxy.CHOICE_LEARNED)
+    # Home Assistant chooses meanwhile; the runner-up (6 of 20) is not forced.
+    assert tracker.choose(HEARD) == (None, proxy.CHOICE_HA)
 
     clock.t += proxy.BENCH_S + 1
     assert not tracker.is_benched(P1)
     assert tracker.choose(HEARD)[0] == P1
     # One more failure rests it again at once.
     tracker.record(P1, False)
-    assert tracker.choose(HEARD)[0] == P2
+    assert tracker.choose(HEARD) == (None, proxy.CHOICE_HA)
     # A success clears the streak.
     clock.t += proxy.BENCH_S + 1
     tracker.record(P1, True)
