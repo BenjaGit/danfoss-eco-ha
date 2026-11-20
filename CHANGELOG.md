@@ -2,6 +2,20 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.10 — fork: parallel connections, proxy on the dashboard
+
+- Connections are now serialized per scanner instead of for the whole home, so
+  different proxies read thermostats at the same time. One proxy still handles
+  one thermostat at a time.
+- A connect left to Home Assistant goes through the scanner with the strongest
+  signal, so it can queue behind that scanner's other connects.
+- New sensor **Bluetooth proxy**: the scanner the thermostat is assigned to
+  right now, with `assigned_by` (`learned`, `locked` or `ha`).
+- New select **Preferred proxy**: lock a thermostat to a scanner from a
+  dashboard. Same setting as the option; it applies without reloading the
+  entry.
+- The connection sensor also shows `assigned_proxy` and `assigned_by`.
+
 ## v1.3.0+benjagit.9 — fork: fairer connect counting
 
 - A connect is counted once per scanner. The built-in retry was counted as a
