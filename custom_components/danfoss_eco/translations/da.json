@@ -82,7 +82,7 @@
           "preferred_proxy": "Foretrukken proxy"
         },
         "data_description": {
-          "preferred_proxy": "Forbind gennem denne proxy, når den har hørt termostaten inden for 10 minutter. Automatisk bruger den proxy, der oftest får forbindelse."
+          "preferred_proxy": "Forbind kun gennem denne proxy. Automatisk bruger den proxy, der oftest får forbindelse."
         }
       }
     }

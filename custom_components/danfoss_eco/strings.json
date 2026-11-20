@@ -82,7 +82,7 @@
           "preferred_proxy": "Preferred Bluetooth proxy"
         },
         "data_description": {
-          "preferred_proxy": "Connect through this proxy when it has heard the thermostat within 10 minutes. Automatic uses the proxy with the best connect record."
+          "preferred_proxy": "Connect through this proxy only. Automatic uses the proxy with the best connect record."
         }
       }
     }

@@ -40,7 +40,7 @@ from .const import (
     UUID_TEMPERATURE,
 )
 from .crypto import EtrvCryptoError, etrv_decode, etrv_encode
-from .proxy import CHOICE_HA, CHOICE_LOCKED, ProxyTracker
+from .proxy import CHOICE_HA, CHOICE_LOCKED, RECENT_ADVERT_S, ProxyTracker
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -215,20 +215,24 @@ def routed_client_class(
                 except Exception as err:  # noqa: BLE001 - HA internals moved
                     _LOGGER.debug("%s: cannot route via %s: %s", address, source, err)
                     backend = None
-            via = choice
-            if backend is None and choice == CHOICE_LOCKED:
-                # A lock never moves to another scanner.
+            if backend is None and source is not None:
+                # Never move to another scanner. A lock means this one only,
+                # and for every other choice the connect holds this scanner's
+                # turn, not the turn of whichever one Home Assistant would
+                # take. A proxy handles one request at a time, so a second
+                # connect sent to it waits there while the 40 s run out.
+                kind = "locked proxy" if choice == CHOICE_LOCKED else "proxy"
                 raise BleakError(
-                    f"locked proxy {source} does not hear {address} "
+                    f"{kind} {source} does not hear {address} "
                     "or has no free connection slot"
                 )
             if backend is None:
-                # No such scanner any more, or it has no free slot.
-                via = CHOICE_HA
+                # No scanner was named: nothing hears the valve by our count.
                 backend = super()._async_get_best_available_backend_and_device(
                     manager
                 )
-            attempts.append((backend.scanner.source, via))
+            attempts.append((backend.scanner.source, choice))
+            via = choice
             _LOGGER.debug(
                 "%s: connecting via %s (%s)", address, backend.scanner.name, via
             )
@@ -299,7 +303,10 @@ class EtrvClient:
                     waited
                     and reroutes < MAX_REROUTES
                     and chosen[1] != CHOICE_LOCKED
-                    and chosen[0] not in advert_ages(self._hass, self.address)
+                    and advert_ages(self._hass, self.address).get(
+                        chosen[0], RECENT_ADVERT_S + 1
+                    )
+                    > RECENT_ADVERT_S
                 ):
                     fresh = route(self._hass, self.address, tracker)
                 if fresh[0] == chosen[0]:

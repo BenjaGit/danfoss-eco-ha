@@ -50,3 +50,10 @@
 - Måling i gang: 30 min fra ca. 21:56, sammenlignes med 31 % / 37 % / 25 % ok (bt-proxy-1/-2/-3). bt-proxy tæller nu "Connecting to" pr. forsøg, så anmodninger = "Connected to" + "Failed to connect to".
 - Derefter: Benjamin beslutter poll-intervallet (står på 1 min).
 - Set ved opstart, ikke fra denne ændring: `EtrvClimate` bruger `_attr_temperature_unit`, som holder op med at virke i HA 2027.11.
+
+### .16 under vejs (20/11 ca. 22:45)
+
+- bt-proxy's fund: to connects til samme proxy samtidig fra os. Proxyen tager én ad gangen, den anden venter i dens kø til HA's 40 s er gået, og proxyen forbinder så for ingen (de "unused" links). bt-proxy .11 kører (ét disconnect-svar, venter op til 12 s ved not found).
+- Rettelse på grenen `fix/one-connect-per-scanner`: en connect flytter aldrig til HA's valg (fejler i stedet), `RECENT_ADVERT_S` 600 -> 90, optionsteksten rettet. Changelog og manifest står allerede til .16. IKKE udgivet.
+- Venter på HA's debuglog (22:25-22:40, baggrundsjob skriver scratchpad `ha_debug.log`) for at bekræfte, at det er flytningen til HA's valg, der giver de to samtidige connects. Derefter: udgiv, installer, spørg Benjamin om genstart, mål 30 min ("unused" skal gå mod 0).
+- Bekræftet i HA's debuglog 22:25-22:34: 6 af 95 connects flyttede til HA's valg ("ha" på en navngiven proxy) og overlappede en anden connect på samme proxy, fx køkken 22:26:27 (timeout på hci0, 2. forsøg flyttet til bt-proxy-1 med in_progress=1).

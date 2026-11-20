@@ -30,7 +30,11 @@ CHOICE_HA = "ha"
 CHOICE_EXPLORE = "explore"
 
 # A scanner is only used if it heard a connectable advertisement this recently.
-RECENT_ADVERT_S = 600
+# A proxy can connect at once while its Bluetooth stack still knows the valve,
+# which is 30 s after the last report, and waits up to 12 s for the next one
+# otherwise. Reports come 1-6 times a minute, so 90 s keeps a scanner that
+# still hears the valve and drops one that would only spend the wait.
+RECENT_ADVERT_S = 90
 # A scanner needs this many counted connects before its record is trusted.
 MIN_ATTEMPTS = 5
 # Share of connects that go to the scanner with the fewest counted attempts,

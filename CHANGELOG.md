@@ -2,6 +2,19 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.16 — fork: one connect per scanner, for real
+
+- A connect no longer moves to Home Assistant's pick when its scanner has lost
+  the thermostat or has no free slot. It fails and the next one chooses again.
+  The move put two connects on one proxy; a proxy handles one at a time, so the
+  second waited there until Home Assistant gave up, and the proxy then
+  connected for nobody and held the link for a minute.
+- A scanner counts as hearing the thermostat for 90 seconds after its latest
+  advertisement, down from 10 minutes. A proxy that no longer hears it spends
+  up to 12 s waiting for an advertisement before it can fail.
+- The option text for the preferred proxy said a lock applied only while the
+  proxy heard the thermostat. A lock has been absolute since benjagit.12.
+
 ## v1.3.0+benjagit.15 — fork: no link left open, longer wait for a connect
 
 - The link is closed when the PIN write right after a connect times out or

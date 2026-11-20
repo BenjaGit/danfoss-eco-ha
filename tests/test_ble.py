@@ -356,16 +356,22 @@ def test_connect_goes_through_the_chosen_scanner():
     assert attempts == [("B", "learned")]
 
 
-def test_chosen_scanner_without_free_slot_falls_back_to_home_assistant():
-    used, attempts = _route("B", [FakeScanner("A"), FakeScanner("B", free=False)])
-    assert used == "A"
-    assert attempts == [("A", "ha")]
-
-
-def test_chosen_scanner_that_is_gone_falls_back_to_home_assistant():
-    used, attempts = _route("C", [FakeScanner("A"), FakeScanner("B")])
-    assert used == "A"
-    assert attempts == [("A", "ha")]
+def test_chosen_scanner_is_never_replaced_by_another():
+    # Seen on real hardware: a connect that moved to Home Assistant's pick
+    # landed on a proxy that was busy with another valve, waited there behind
+    # it, and was given up by Home Assistant before the proxy got to it. The
+    # proxy then connected for nobody and kept the link.
+    for scanners in (
+        [FakeScanner("A"), FakeScanner("B", free=False)],  # no free slot
+        [FakeScanner("A"), FakeScanner("C")],  # gone
+    ):
+        for choice in ("learned", "explore", "ha"):
+            try:
+                _route("B", scanners, choice)
+            except BleakError as err:
+                assert "proxy B does not hear" in str(err)
+            else:
+                raise AssertionError("expected the connect to fail")
 
 
 def test_locked_scanner_is_never_replaced_by_another():
@@ -608,6 +614,12 @@ def test_scanner_that_still_hears_the_valve_is_kept_after_queueing():
     route, holds_b = _queue_behind_a("learned", {"A": 5.0, "B": 0.0}, ("B", "ha"))
     assert route == ("A", "learned")
     assert not holds_b
+
+
+def test_scanner_with_only_an_old_advert_is_replaced_after_queueing():
+    route, holds_b = _queue_behind_a("learned", {"A": 200.0, "B": 0.0}, ("B", "ha"))
+    assert route == ("B", "ha")
+    assert holds_b
 
 
 def test_locked_scanner_is_kept_after_queueing_even_if_it_lost_the_valve():

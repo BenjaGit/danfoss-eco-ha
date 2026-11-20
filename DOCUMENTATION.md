@@ -265,7 +265,11 @@ scanner for each thermostat and connects through the one with the best record:
 - A scanner is used once it has 5 counted connects. Until then Home Assistant
   chooses, which is also how the counting starts.
 - The scanner must have heard a connectable advertisement from the thermostat
-  within the last 10 minutes.
+  within the last 90 seconds.
+- A connect stays on the scanner it was given. If that scanner has lost the
+  thermostat or has no free slot, the connect fails and the next one chooses
+  again; it does not move to another scanner, which may be busy with another
+  thermostat.
 - While a scanner that hears the thermostat is still unmapped, half the connects
   go to the least-tried unmapped scanner. A scanner is mapped after 20 counted
   connects, or after 10 without a single success. This runs by itself, also

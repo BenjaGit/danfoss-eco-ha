@@ -82,7 +82,7 @@
           "preferred_proxy": "Preferowane proxy Bluetooth"
         },
         "data_description": {
-          "preferred_proxy": "Łącz przez to proxy, jeśli słyszało termostat w ciągu ostatnich 10 minut. Automatycznie wybiera proxy z najlepszą skutecznością połączeń."
+          "preferred_proxy": "Łącz wyłącznie przez to proxy. Automatycznie wybiera proxy z najlepszą skutecznością połączeń."
         }
       }
     }
