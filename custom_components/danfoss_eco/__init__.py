@@ -14,7 +14,7 @@ from homeassistant.helpers.start import async_at_started
 from homeassistant.util import dt as dt_util
 
 from .ble import EtrvError
-from .const import DOMAIN
+from .const import CONF_PREFERRED_PROXY, DOMAIN
 from .coordinator import EtrvCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -24,6 +24,7 @@ PLATFORMS = [
     Platform.BUTTON,
     Platform.CLIMATE,
     Platform.NUMBER,
+    Platform.SELECT,
     Platform.SENSOR,
     Platform.SWITCH,
 ]
@@ -113,6 +114,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: DanfossEcoConfigEntry) -
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    coordinator = entry.runtime_data
+    old, new = coordinator.applied_options, entry.options
+    changed = {key for key in {*old, *new} if old.get(key) != new.get(key)}
+    if changed == {CONF_PREFERRED_PROXY}:
+        # Locking a proxy from the dashboard must not drop the entities for a
+        # reload; the choice applies from the next connect.
+        coordinator.async_set_preferred_proxy(new.get(CONF_PREFERRED_PROXY))
+        return
     await hass.config_entries.async_reload(entry.entry_id)
 
 

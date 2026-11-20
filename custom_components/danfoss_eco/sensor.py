@@ -82,7 +82,11 @@ async def async_setup_entry(
 ) -> None:
     coordinator = entry.runtime_data
     async_add_entities(
-        [*(EtrvSensor(coordinator, d) for d in SENSORS), EtrvPendingSensor(coordinator)]
+        [
+            *(EtrvSensor(coordinator, d) for d in SENSORS),
+            EtrvPendingSensor(coordinator),
+            EtrvProxySensor(coordinator),
+        ]
     )
 
 
@@ -132,3 +136,27 @@ class EtrvPendingSensor(EtrvEntity, SensorEntity):
     def extra_state_attributes(self) -> dict:
         pending = self.coordinator.pending
         return {"queued_since": pending.queued_at, "changes": pending.describe()}
+
+
+class EtrvProxySensor(EtrvEntity, SensorEntity):
+    """The Bluetooth proxy this thermostat is assigned to right now."""
+
+    _attr_translation_key = "proxy"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _always_available = True
+
+    def __init__(self, coordinator: EtrvCoordinator) -> None:
+        super().__init__(coordinator, "proxy")
+
+    @property
+    def native_value(self) -> str | None:
+        return self.coordinator.proxy_attributes["assigned_proxy"]
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        attributes = self.coordinator.proxy_attributes
+        return {
+            "assigned_by": attributes["assigned_by"],
+            "last_proxy": attributes["proxy"],
+            "last_choice": attributes["proxy_choice"],
+        }

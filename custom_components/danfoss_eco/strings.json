@@ -103,6 +103,9 @@
       },
       "pending_writes": {
         "name": "Pending commands"
+      },
+      "proxy": {
+        "name": "Bluetooth proxy"
       }
     },
     "binary_sensor": {
@@ -162,6 +165,14 @@
       },
       "away_temperature": {
         "name": "Setback (sleep / away) temperature"
+      }
+    },
+    "select": {
+      "preferred_proxy": {
+        "name": "Preferred proxy",
+        "state": {
+          "auto": "Automatic"
+        }
       }
     }
   },

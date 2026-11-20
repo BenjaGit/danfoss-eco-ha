@@ -73,13 +73,16 @@ class ProxyTracker:
         rng: Callable[[], float] = random.random,
         now: Callable[[], float] = time.time,
     ) -> None:
-        self.locked = locked if locked and locked != AUTO else None
+        self.set_locked(locked)
         self.stats: dict[str, ProxyStats] = {}
         self._rng = rng
         self._now = now
         # The scanner the latest connect went through, and who chose it.
         self.last_source: str | None = None
         self.last_choice: str | None = None
+
+    def set_locked(self, locked: str | None) -> None:
+        self.locked = locked if locked and locked != AUTO else None
 
     # ------------------------------------------------------------ choice ----
     def is_benched(self, source: str) -> bool:
@@ -95,6 +98,15 @@ class ProxyTracker:
         latest advertisement from the thermostat. Returns (scanner, who chose
         it); the scanner is None when Home Assistant is to choose.
         """
+        if self.locked is None and self._rng() < EXPLORE_RATE:
+            return None, CHOICE_HA
+        return self.assigned(heard)
+
+    def assigned(self, heard: Mapping[str, float]) -> tuple[str | None, str]:
+        """The scanner the thermostat is assigned to right now.
+
+        Same as choose, minus the occasional connect left to Home Assistant.
+        """
         usable = [
             source
             for source, age in heard.items()
@@ -103,8 +115,6 @@ class ProxyTracker:
         if self.locked is not None:
             if self.locked in usable:
                 return self.locked, CHOICE_LOCKED
-            return None, CHOICE_HA
-        if self._rng() < EXPLORE_RATE:
             return None, CHOICE_HA
         proven = [
             source

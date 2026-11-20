@@ -103,6 +103,9 @@
       },
       "pending_writes": {
         "name": "Ventende kommandoer"
+      },
+      "proxy": {
+        "name": "Bluetooth-proxy"
       }
     },
     "binary_sensor": {
@@ -162,6 +165,14 @@
       },
       "away_temperature": {
         "name": "Sænkningstemperatur (søvn / ude)"
+      }
+    },
+    "select": {
+      "preferred_proxy": {
+        "name": "Foretrukken proxy",
+        "state": {
+          "auto": "Automatisk"
+        }
       }
     }
   },

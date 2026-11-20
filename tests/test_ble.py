@@ -332,7 +332,12 @@ def _connect_with_tracker(outcomes: list[bool], pin_error: Exception | None = No
     try:
         for name, value in patched.items():
             setattr(ble, name, value)
-        asyncio.run(etrv._connect())
+
+        async def connect():
+            async with etrv._slot():
+                await etrv._connect()
+
+        asyncio.run(connect())
     except ble.EtrvError as err:
         error = err
     finally:
@@ -420,6 +425,87 @@ def test_advert_ages_come_from_each_connectable_scanner():
     assert 29 < ages["A"] < 32
     assert 899 < ages["B"] < 902
     assert ages["C"] == 0.0
+
+
+def _run_two_reads(route_a: str, route_b: str) -> int:
+    """Two thermostats read at once; returns how many were connected together."""
+    proxy = sys.modules["danfoss_eco.proxy"]
+    state = {"open": 0, "peak": 0}
+
+    class SlowClient(FakeClient):
+        async def disconnect(self):
+            state["open"] -= 1
+
+    def client(address: str):
+        etrv = ble.EtrvClient(None, address, KEY, 0, proxy.ProxyTracker())
+
+        async def connect():
+            state["open"] += 1
+            state["peak"] = max(state["peak"], state["open"])
+            await asyncio.sleep(0.01)
+            return SlowClient(set())
+
+        etrv._connect = connect
+        return etrv
+
+    routes = {"00:04:2F:00:00:01": route_a, "00:04:2F:00:00:02": route_b}
+    saved = ble.route
+    ble.route = lambda hass, address, tracker: (routes[address], "learned")
+    try:
+
+        async def both():
+            await asyncio.gather(*(client(a).read_state() for a in routes))
+
+        asyncio.run(both())
+    finally:
+        ble.route = saved
+        ble._BLE_LOCKS.clear()
+    return state["peak"]
+
+
+def test_thermostats_on_different_scanners_are_read_side_by_side():
+    assert _run_two_reads("A", "B") == 2
+
+
+def test_thermostats_on_the_same_scanner_take_turns():
+    assert _run_two_reads("A", "A") == 1
+
+
+def test_connect_left_to_home_assistant_queues_behind_the_strongest_scanner():
+    # Home Assistant connects through the best signal, so that scanner's lock
+    # is the one to wait for; otherwise two valves would dial out through it.
+    proxy = sys.modules["danfoss_eco.proxy"]
+
+    def device(source, rssi):
+        return types.SimpleNamespace(
+            scanner=types.SimpleNamespace(
+                source=source, discovered_device_timestamps={}
+            ),
+            advertisement=types.SimpleNamespace(rssi=rssi),
+        )
+
+    saved = ble.bluetooth
+    ble.bluetooth = types.SimpleNamespace(
+        async_scanner_devices_by_address=lambda hass, address, connectable: [
+            device("A", -80),
+            device("B", -62),
+        ]
+    )
+    try:
+        # No records yet: nothing is proven, so Home Assistant chooses.
+        assert ble.route(None, "00:04:2F:00:00:00", proxy.ProxyTracker()) == (
+            "B",
+            "ha",
+        )
+        ble.bluetooth = types.SimpleNamespace(
+            async_scanner_devices_by_address=lambda *a: []
+        )
+        assert ble.route(None, "00:04:2F:00:00:00", proxy.ProxyTracker()) == (
+            None,
+            "ha",
+        )
+    finally:
+        ble.bluetooth = saved
 
 
 class RecordingClient(FakeClient):
