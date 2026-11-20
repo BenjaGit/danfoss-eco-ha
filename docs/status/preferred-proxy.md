@@ -2,18 +2,20 @@
 
 ## Næste skridt
 
-1. **Se på kortlægningen** (startet 20/11-2026 kl. 18:57 med v1.3.0+benjagit.14): den er færdig,
-   når ingen proxy har "…" i tabellen på `/lovelace/termostat-proxy` (`proxy_stats.mapped` er
-   true for alle par). Tjek især NUC'en (hci0) pr. termostat.
-2. **Ret valg-før-kø** ved næste version (ikke hastende, Benjamin valgte 20/11 at vente):
-   `EtrvClient._slot` i ble.py vælger proxy, før den venter på proxyens lås. Hører proxyen
-   ikke længere termostaten, når låsen er fri, falder `routed_client_class` tilbage til HA's
-   valg, og så kan to termostater forbinde via samme Pi samtidig (ca. hvert 10. forsøg under
-   kortlægning). Rettelse: tjek `advert_ages` igen efter låsen er taget, og vælg om, hvis
-   proxyen er faldet ud.
-3. **Poll-interval:** alle 18 står på 1 min som intensiv test (før 60). De gamle options ligger
-   på HA i `/config/danfoss_eco_store_backup_20261120/options_before_1min.json`. Spørg
-   Benjamin, hvad det skal ende på, når kortlægningen er færdig.
+Stand 20/11-2026 kl. 23:50: HA kører v1.3.0+benjagit.18, bt-proxy v1.0.3-benjagit.11 på alle
+tre Pi'er, alle 18 termostater på auto med poll-interval 10 min (sat 23:47 via options-flow,
+18 af 18 `loaded`). Benjamin ser på det igen 21/11.
+
+1. **Mål natten over på 10 min:** hvor friske er aflæsningerne, og lukker Pi'erne stadig 0
+   ubrugte links ("Closing … unused" i journalen)? Sammenlign med .16 på 1 min: 62/78/72 % ok
+   på bt-proxy-1/-2/-3, 5,1 ok/min, 16 af 18 aflæst inden for 5 min. .17 og .18 er ikke målt
+   hver for sig (.17 kørte kun 23:27-23:41).
+2. **Poll-intervallet endeligt:** 10 min er Benjamins valg for natten; før testen var det 60
+   (`/config/danfoss_eco_store_backup_20261120/options_before_1min.json` på HA).
+3. **Tabt link under opkobling** er nu største fejl (radioforhold). Idéer, ikke besluttet:
+   USB-Bluetooth-dongle eller kablet net på Pi'erne, flytte en Pi nærmere stue vest/kontor 1.
+4. **Småting:** `EtrvClimate` bruger `_attr_temperature_unit` (forældet fra HA 2027.11);
+   homeassistant-fanen w5:pH har kun fået svar for .9.
 
 ## Status 20/11 kl. 19:10
 
