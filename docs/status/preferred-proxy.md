@@ -72,3 +72,9 @@
 - .17: ét connect-forsøg pr. aflæsning (`CONNECT_ATTEMPTS = 1`). Udgives nu; genstart kræver Benjamins ja.
 - Ikke lavet, foreslået til senere: kø efter hvem der har ventet længst (asyncio.Lock er FIFO).
 - .17 udgivet, installeret (34 filer, md5 ens) og HA genstartet 23:27 med Benjamins ja; `installed_version` v1.3.0-benjagit.17, ingen opstartsfejl. Måling 23:31-00:01 i gang (baggrundsjob): sammenlign med .16 (62/78/72 % ok, 5,1 ok/min, 16 af 18 aflæst inden for 5 min).
+
+### .18 (20/11 ca. 23:55)
+
+- Køen pr. proxy er nu efter "længst siden sidste vellykkede aflæsning" (`_Turn` i ble.py) i stedet for ankomst. Udgivet og lagt på HA; genstart kræver Benjamins ja. Genstarten afbryder .17-målingen 23:31-00:01.
+- Benjamin bad kl. ca. 23:35 om poll-interval 10 min og afbrød så selve kommandoen, da han bad om køen. IKKE sat endnu (alle 18 står på 1 min): spørg ham sammen med genstarten. Gammel værdi i `/config/danfoss_eco_store_backup_20261120/options_before_1min.json`; scriptet er scratchpad `set_poll_10.py` (options-flow pr. entry, overskriver ikke backuppen).
+- Forbehold ved køen: med 1 min poll står en termostat, der aldrig svarer, forrest hver gang og tager op til 40 s af proxyen pr. minut. Med 10 min er det uden betydning.

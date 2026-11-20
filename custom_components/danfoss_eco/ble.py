@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import heapq
+import itertools
 import logging
 import struct
 import time
@@ -53,7 +55,7 @@ CONNECT_TIMEOUT = 45.0
 # lock for the whole house, 18 valves at 12-15 s per attempt took 3.5 minutes
 # a round. The None key is for connects whose scanner is not known beforehand
 # (pairing, or a thermostat no scanner lists).
-_BLE_LOCKS: dict[str | None, asyncio.Lock] = {}
+_BLE_LOCKS: dict[str | None, _Turn] = {}
 
 
 # How long to wait for a connect. A good connect takes 9-12 s and one in ten
@@ -68,10 +70,54 @@ CONNECT_ATTEMPTS = 1
 MAX_REROUTES = 2
 
 
-def _lock_for(source: str | None) -> asyncio.Lock:
+class _Turn:
+    """One connect at a time on a scanner; the longest-unread valve goes next.
+
+    An asyncio.Lock serves waiters in arrival order. With several thermostats
+    per scanner a poll waits minutes for its turn, and a valve that failed a
+    few times in a row fell 20 minutes behind while valves read a moment ago
+    were read again. Waiters are ordered by when they were last read instead,
+    and by arrival among equals.
+    """
+
+    _arrival = itertools.count()
+
+    def __init__(self) -> None:
+        self._busy = False
+        self._waiters: list[tuple[float, int, asyncio.Future[None]]] = []
+
+    def locked(self) -> bool:
+        return self._busy
+
+    async def acquire(self, last_read: float = 0.0) -> None:
+        """Wait for the turn. `last_read` is a monotonic time; 0 means never."""
+        if not self._busy:
+            self._busy = True
+            return
+        waiter: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+        heapq.heappush(self._waiters, (last_read, next(self._arrival), waiter))
+        try:
+            await waiter
+        except BaseException:
+            # Cancelled. If the turn had already been handed over, pass it on;
+            # otherwise release() skips the cancelled waiter.
+            if waiter.done() and not waiter.cancelled():
+                self.release()
+            raise
+
+    def release(self) -> None:
+        while self._waiters:
+            waiter = heapq.heappop(self._waiters)[2]
+            if not waiter.done():
+                waiter.set_result(None)
+                return
+        self._busy = False
+
+
+def _lock_for(source: str | None) -> _Turn:
     lock = _BLE_LOCKS.get(source)
     if lock is None:
-        lock = _BLE_LOCKS[source] = asyncio.Lock()
+        lock = _BLE_LOCKS[source] = _Turn()
     return lock
 
 # After a write, re-read the characteristic we touched so the entity shows the
@@ -279,6 +325,8 @@ class EtrvClient:
         # Without a tracker (pairing) Home Assistant picks the scanner.
         self._tracker = tracker
         self._route: tuple[str | None, str] = (None, CHOICE_HA)
+        # Monotonic time of the latest successful read; 0 until the first.
+        self._last_read = 0.0
 
     @contextlib.asynccontextmanager
     async def _slot(self) -> AsyncIterator[None]:
@@ -292,15 +340,20 @@ class EtrvClient:
         """
         tracker = getattr(self, "_tracker", None)
         self._route = (None, CHOICE_HA)
+        last_read = getattr(self, "_last_read", 0.0)
         if tracker is None:
-            async with _lock_for(None):
+            lock = _lock_for(None)
+            await lock.acquire(last_read)
+            try:
                 yield
+            finally:
+                lock.release()
             return
         chosen = route(self._hass, self.address, tracker)
         for reroutes in range(MAX_REROUTES + 1):
             lock = _lock_for(chosen[0])
             waited = lock.locked()
-            await lock.acquire()
+            await lock.acquire(last_read)
             try:
                 fresh = chosen
                 if (
@@ -486,6 +539,7 @@ class EtrvClient:
             client = await self._connect()
             try:
                 raw = await self._read_all(client)
+                self._last_read = time.monotonic()
                 if build_writes is None:
                     return raw
                 ops = build_writes(raw)

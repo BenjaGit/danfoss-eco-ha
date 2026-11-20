@@ -325,6 +325,10 @@ A connect waits up to 40 s for the scanner to answer. Good connects take 9-14 s.
 Each poll makes one attempt; a failed one is retried by the next poll, so the
 scanner is free for its other thermostats in between.
 
+Thermostats waiting for the same scanner get it in order of how long ago they
+were last read, so one that keeps failing is tried again before the ones that
+were just read.
+
 ### Updating the secret key or PIN (reconfigure)
 
 If a device's key changes (e.g. you re-paired it in the Danfoss app) or you set a PIN

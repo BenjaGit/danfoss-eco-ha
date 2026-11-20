@@ -2,6 +2,13 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.18 — fork: the longest-unread thermostat goes first
+
+- Thermostats waiting for the same scanner are served by how long ago they
+  were last read, not by arrival. A valve that failed a few times in a row no
+  longer waits behind valves that were read a minute ago. Counted from the
+  start of Home Assistant; until a valve's first read it goes first.
+
 ## v1.3.0+benjagit.17 — fork: one connect attempt per poll
 
 - A poll makes one connect attempt instead of two. The proxies retry by
