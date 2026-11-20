@@ -158,7 +158,7 @@ def test_old_counts_fade_so_a_moved_proxy_is_relearned():
 def test_records_survive_a_save_and_load():
     clock = Clock()
     tracker = _tracker(records={P1: (20, 9)}, clock=clock)
-    for _ in range(3):
+    for _ in range(proxy.MAX_CONSECUTIVE_FAILURES):
         tracker.record(P2, False)
     restored = proxy.ProxyTracker(now=clock)
     restored.load(tracker.as_dict())
