@@ -29,7 +29,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .ble import EtrvClient, EtrvError, last_connectable_signal, route, scanner_name
+from .ble import EtrvClient, EtrvError, route, scanner_name, signal_via
 from .const import (
     ADV_RETRY_MIN_INTERVAL_S,
     CONF_AUTO_TIME_SYNC,
@@ -324,7 +324,9 @@ class EtrvCoordinator(DataUpdateCoordinator[EtrvState]):
             rssi=None,
             source=None,
         )
-        state.rssi, state.source = last_connectable_signal(self.hass, self.address)
+        state.rssi, state.source = signal_via(
+            self.hass, self.address, self.proxies.last_source
+        )
 
         parts = raw.get("schedule")
         if parts:

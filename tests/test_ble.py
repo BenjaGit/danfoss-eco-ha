@@ -219,6 +219,33 @@ def test_signal_comes_from_connectable_scanners_only():
     assert calls == [True]
 
 
+def test_signal_is_the_one_heard_by_the_scanner_that_read():
+    def device(source, rssi):
+        return types.SimpleNamespace(
+            scanner=types.SimpleNamespace(source=source),
+            advertisement=types.SimpleNamespace(rssi=rssi),
+        )
+
+    saved = ble.bluetooth
+    ble.bluetooth = types.SimpleNamespace(
+        async_scanner_devices_by_address=lambda hass, address, connectable: [
+            device("A", -58),
+            device("B", -79),
+        ],
+        async_last_service_info=lambda *a, **k: types.SimpleNamespace(
+            rssi=-58, source="A"
+        ),
+    )
+    try:
+        # Read through "B", although "A" hears the valve better.
+        assert ble.signal_via(None, "00:04:2F:00:00:00", "B") == (-79, "B")
+        # Scanner unknown or no longer listing the valve: latest advertisement.
+        assert ble.signal_via(None, "00:04:2F:00:00:00", None) == (-58, "A")
+        assert ble.signal_via(None, "00:04:2F:00:00:00", "C") == (-58, "A")
+    finally:
+        ble.bluetooth = saved
+
+
 class FakeScanner:
     def __init__(self, source: str, free: bool = True):
         self.source = source

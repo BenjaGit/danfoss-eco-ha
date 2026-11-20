@@ -2,6 +2,13 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.13 — fork: signal from the proxy that read
+
+- The Bluetooth signal sensor (and its `source`) now shows the signal at the
+  scanner the thermostat was just read through. It showed the latest
+  advertisement from any connectable scanner, which is often a different one
+  now that the proxy is chosen by record instead of by signal.
+
 ## v1.3.0+benjagit.12 — fork: a lock is absolute
 
 - A thermostat locked to a proxy only ever connects through that proxy. Before,
