@@ -350,17 +350,29 @@ def test_successful_connect_is_counted_for_the_scanner_used():
     assert "A" not in tracker.stats
 
 
-def test_retry_inside_one_connect_counts_the_failed_attempt_too():
+def test_retry_inside_one_connect_is_counted_once():
+    # The proxy refuses the immediate retry without trying, so two attempts
+    # in one connect are one real attempt.
     attempts, successes, _, error = _connect_with_tracker([False, True])
     assert error is None
-    assert (attempts, successes) == (2, 1)
+    assert (attempts, successes) == (1, 1)
 
 
-def test_failed_connect_counts_every_attempt_as_failed():
+def test_failed_connect_is_one_failure_however_many_retries():
     attempts, successes, tracker, error = _connect_with_tracker([False, False])
     assert isinstance(error, ble.EtrvError)
-    assert (attempts, successes) == (2, 0)
-    assert tracker.stats["B"].consecutive_failures == 2
+    assert (attempts, successes) == (1, 0)
+    assert tracker.stats["B"].consecutive_failures == 1
+
+
+def test_connect_that_moved_to_another_scanner_counts_both():
+    proxy = sys.modules["danfoss_eco.proxy"]
+    tracker = proxy.ProxyTracker()
+    etrv = ble.EtrvClient(None, "00:04:2F:00:00:00", KEY, 0, tracker)
+    etrv._count([("B", "learned"), ("A", "ha")], connected=True)
+    assert (tracker.stats["B"].attempts, tracker.stats["B"].successes) == (1, 0)
+    assert (tracker.stats["A"].attempts, tracker.stats["A"].successes) == (1, 1)
+    assert (tracker.last_source, tracker.last_choice) == ("A", "ha")
 
 
 def test_link_that_dies_before_the_first_write_counts_as_failed():

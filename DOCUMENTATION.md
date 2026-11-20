@@ -268,12 +268,12 @@ scanner for each thermostat and connects through the one with the best record:
   within the last 10 minutes.
 - About 1 connect in 10 is left to Home Assistant, so the other scanners keep
   being tried and the choice can change when a proxy is moved.
-- After 3 failed connects in a row a scanner is rested for 30 minutes.
+- After 8 failed connects in a row a scanner is rested for 30 minutes.
 - When no scanner qualifies, Home Assistant chooses as before.
 
 Selecting a proxy in the options locks the thermostat to it. The lock overrides the
 learned choice and is never left to Home Assistant at random, but the 10-minute
-and 3-failures rules still apply, and then Home Assistant chooses.
+and 8-failures rules still apply, and then Home Assistant chooses.
 
 The connection binary sensor shows the result:
 
@@ -282,7 +282,7 @@ The connection binary sensor shows the result:
 | `proxy` | The scanner the latest connect went through. |
 | `proxy_choice` | Who chose it: `learned`, `locked` or `ha`. |
 | `preferred_proxy` | The locked scanner, if one is set. |
-| `proxy_stats` | Per scanner: `attempts`, `successes`, `success_rate` and `benched` (resting after 3 failures in a row). |
+| `proxy_stats` | Per scanner: `attempts`, `successes`, `success_rate` and `benched` (resting after 8 failures in a row). |
 
 Pairing always uses Home Assistant's choice.
 

@@ -34,8 +34,10 @@ MIN_ATTEMPTS = 5
 # Share of connects left to Home Assistant, so other scanners keep being tried.
 EXPLORE_RATE = 0.1
 # After this many failures in a row a scanner is rested for BENCH_S, then
-# tried once more; another failure rests it again.
-MAX_CONSECUTIVE_FAILURES = 3
+# tried once more; another failure rests it again. Even a thermostat's best
+# proxy only connects about 3 times in 10, so 3 or 4 failures in a row are
+# ordinary; 8 in a row happen by chance about 1 time in 17.
+MAX_CONSECUTIVE_FAILURES = 8
 BENCH_S = 1800
 # Halve the counts when they get this large, so the record follows a proxy
 # that was moved instead of averaging over its whole life.

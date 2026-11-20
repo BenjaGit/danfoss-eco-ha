@@ -248,16 +248,18 @@ class EtrvClient:
         return client
 
     def _count(self, attempts: list[tuple[str, str]], *, connected: bool) -> None:
-        """Count each connect attempt against the scanner it went through.
+        """Count this connect once against each scanner it went through.
 
-        Only the last attempt can have succeeded; any before it were retried.
+        establish_connection retries inside one call, but a proxy refuses a
+        new attempt for a few seconds after a failure, so the retry fails at
+        once without reaching the radio. Counting it would double every
+        failure. Only the scanner of the last attempt can have succeeded.
         """
-        if self._tracker is None:
+        if self._tracker is None or not attempts:
             return
-        for idx, (source, choice) in enumerate(attempts):
-            self._tracker.record(
-                source, connected and idx == len(attempts) - 1, choice
-            )
+        last_source = attempts[-1][0]
+        for source, choice in dict(attempts).items():
+            self._tracker.record(source, connected and source == last_source, choice)
         attempts.clear()
 
     async def _read(self, client, uuid: str, *, decode: bool = True) -> bytes:
