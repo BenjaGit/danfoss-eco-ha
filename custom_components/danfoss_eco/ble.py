@@ -40,7 +40,7 @@ from .const import (
     UUID_TEMPERATURE,
 )
 from .crypto import EtrvCryptoError, etrv_decode, etrv_encode
-from .proxy import CHOICE_HA, ProxyTracker
+from .proxy import CHOICE_HA, CHOICE_LOCKED, ProxyTracker
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -186,6 +186,12 @@ def routed_client_class(
                     _LOGGER.debug("%s: cannot route via %s: %s", address, source, err)
                     backend = None
             via = choice
+            if backend is None and choice == CHOICE_LOCKED:
+                # A lock never moves to another scanner.
+                raise BleakError(
+                    f"locked proxy {source} does not hear {address} "
+                    "or has no free connection slot"
+                )
             if backend is None:
                 # No such scanner any more, or it has no free slot.
                 via = CHOICE_HA

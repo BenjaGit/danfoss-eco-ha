@@ -281,9 +281,25 @@ def test_chosen_scanner_without_free_slot_falls_back_to_home_assistant():
 
 
 def test_chosen_scanner_that_is_gone_falls_back_to_home_assistant():
-    used, attempts = _route("C", [FakeScanner("A"), FakeScanner("B")], "locked")
+    used, attempts = _route("C", [FakeScanner("A"), FakeScanner("B")])
     assert used == "A"
     assert attempts == [("A", "ha")]
+
+
+def test_locked_scanner_is_never_replaced_by_another():
+    # Gone, or no free slot: the connect fails rather than use scanner "A".
+    for scanners in (
+        [FakeScanner("A"), FakeScanner("B")],
+        [FakeScanner("A"), FakeScanner("C", free=False)],
+    ):
+        try:
+            _route("C", scanners, "locked")
+        except BleakError as err:
+            assert "locked proxy C" in str(err)
+        else:
+            raise AssertionError("expected the locked connect to fail")
+    used, attempts = _route("B", [FakeScanner("A"), FakeScanner("B")], "locked")
+    assert (used, attempts) == ("B", [("B", "locked")])
 
 
 def test_no_choice_leaves_the_scanner_to_home_assistant_and_records_it():

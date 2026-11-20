@@ -2,6 +2,13 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.12 — fork: a lock is absolute
+
+- A thermostat locked to a proxy only ever connects through that proxy. Before,
+  Home Assistant took over when the proxy had failed 8 times in a row, had not
+  heard the thermostat for 10 minutes or had no free slot. Now such a connect
+  fails with an error naming the locked proxy and is retried.
+
 ## v1.3.0+benjagit.11 — fork: a resting proxy hands over to Home Assistant
 
 - When a thermostat's best scanner is resting after 8 failures, Home Assistant

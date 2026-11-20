@@ -8,7 +8,7 @@ through any other only 8 %, and signal strength did not tell them apart.
 So the outcome of every connect is counted per scanner, and the scanner with
 the best record is used. Now and then Home Assistant chooses instead, which
 keeps the counts of the other scanners alive. A proxy can also be locked in
-the options.
+the options; a locked thermostat never connects through anything else.
 
 Nothing here imports Home Assistant, so the rules can be tested on their own.
 """
@@ -107,11 +107,12 @@ class ProxyTracker:
 
         Same as choose, minus the occasional connect left to Home Assistant.
         """
-        recent = [source for source, age in heard.items() if age <= RECENT_ADVERT_S]
+        # A lock is absolute. If the locked scanner cannot reach the
+        # thermostat the connect fails; it never moves to another scanner,
+        # or the lock would mean no more than "automatic".
         if self.locked is not None:
-            if self.locked in recent and not self.is_benched(self.locked):
-                return self.locked, CHOICE_LOCKED
-            return None, CHOICE_HA
+            return self.locked, CHOICE_LOCKED
+        recent = [source for source, age in heard.items() if age <= RECENT_ADVERT_S]
         proven = [
             source
             for source in recent
