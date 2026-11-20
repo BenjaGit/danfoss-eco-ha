@@ -56,6 +56,14 @@ CONNECT_TIMEOUT = 45.0
 _BLE_LOCKS: dict[str | None, asyncio.Lock] = {}
 
 
+# How long to wait for a connect. A good connect takes 9-12 s and one in ten
+# more than 13 s, so the usual 20 s (and the proxies' former 15 s) cut off
+# connects that were about to succeed. Stays above the proxies' own limit.
+CONNECT_TIMEOUT_S = 40.0
+# How many times a connect may change scanner while it waits in line.
+MAX_REROUTES = 2
+
+
 def _lock_for(source: str | None) -> asyncio.Lock:
     lock = _BLE_LOCKS.get(source)
     if lock is None:
@@ -187,6 +195,11 @@ def routed_client_class(
     """
 
     class RoutedClient(BleakClientWithServiceCache):
+        async def connect(self, **kwargs):
+            # bleak-retry-connector always asks for its own 20 s.
+            kwargs["timeout"] = CONNECT_TIMEOUT_S
+            return await super().connect(**kwargs)
+
         def _async_get_best_available_backend_and_device(self, manager):
             backend = None
             if source is not None:
@@ -264,14 +277,44 @@ class EtrvClient:
         """Pick the scanner and wait for its turn.
 
         The scanner is chosen before queueing, so thermostats bound for
-        different scanners do not wait for each other.
+        different scanners do not wait for each other. If the wait was long
+        enough for that scanner to lose the thermostat, the choice is made
+        again: connecting anyway would fall back to Home Assistant's pick
+        and dial out through a scanner whose turn this is not.
         """
         tracker = getattr(self, "_tracker", None)
         self._route = (None, CHOICE_HA)
-        if tracker is not None:
-            self._route = route(self._hass, self.address, tracker)
-        async with _lock_for(self._route[0]):
-            yield
+        if tracker is None:
+            async with _lock_for(None):
+                yield
+            return
+        chosen = route(self._hass, self.address, tracker)
+        for reroutes in range(MAX_REROUTES + 1):
+            lock = _lock_for(chosen[0])
+            waited = lock.locked()
+            await lock.acquire()
+            try:
+                fresh = chosen
+                if (
+                    waited
+                    and reroutes < MAX_REROUTES
+                    and chosen[1] != CHOICE_LOCKED
+                    and chosen[0] not in advert_ages(self._hass, self.address)
+                ):
+                    fresh = route(self._hass, self.address, tracker)
+                if fresh[0] == chosen[0]:
+                    self._route = fresh
+                    yield
+                    return
+                _LOGGER.debug(
+                    "%s: %s lost it while queueing, now via %s",
+                    self.address,
+                    chosen[0],
+                    fresh[0],
+                )
+                chosen = fresh
+            finally:
+                lock.release()
 
     async def _connect(self) -> BleakClientWithServiceCache:
         ble_device = bluetooth.async_ble_device_from_address(

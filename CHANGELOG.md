@@ -2,6 +2,19 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.15 — fork: no link left open, longer wait for a connect
+
+- The link is closed when the PIN write right after a connect times out or
+  the poll is cancelled. Only a Bluetooth error closed it before.
+- A connect waits 40 s for the scanner instead of 20 s. A good connect takes
+  9-12 s and one in ten more than 13 s, and the proxies' limit goes from 15 s
+  to about 30 s.
+- A connect that waited for its scanner's turn checks that the scanner still
+  hears the thermostat, and chooses again if not. It used to connect anyway,
+  fall back to Home Assistant's pick and dial out through a scanner that was
+  busy with another thermostat; that was about 1 connect in 10. A locked
+  proxy is never replaced.
+
 ## v1.3.0+benjagit.14 — fork: scanners are mapped, not found by chance
 
 - Exploring connects now go to the scanner with the fewest counted connects
