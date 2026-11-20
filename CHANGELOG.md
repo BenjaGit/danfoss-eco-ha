@@ -2,6 +2,25 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.8 — fork: preferred proxy
+
+- Each thermostat now connects through the Bluetooth proxy that works best for
+  it. Successful and failed connects are counted per scanner, and the scanner
+  with the best record is used when it has heard the thermostat within 10
+  minutes. About 1 connect in 10 is left to Home Assistant, so the counts of
+  the other scanners stay current. Before this, Home Assistant chose by signal
+  strength alone.
+- New option **Preferred Bluetooth proxy**: lock a thermostat to one scanner.
+  The lock overrides the learned choice.
+- A scanner that fails 3 connects in a row is rested for 30 minutes. If the
+  chosen scanner is resting, has no free slot or has not heard the thermostat,
+  Home Assistant chooses as before.
+- The connection sensor has new attributes: `proxy`, `proxy_choice` (`learned`,
+  `locked` or `ha`), `preferred_proxy` and `proxy_stats` (attempts and
+  successes per scanner).
+- The cache is written when an entry unloads, so changing options no longer
+  drops the last few seconds of state.
+
 ## v1.3.0+benjagit.7 — fork: connection sensor follows every retry
 
 - The connection sensor's attributes (consecutive_failures, last_error,
