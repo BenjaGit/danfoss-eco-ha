@@ -57,3 +57,10 @@
 - Rettelse på grenen `fix/one-connect-per-scanner`: en connect flytter aldrig til HA's valg (fejler i stedet), `RECENT_ADVERT_S` 600 -> 90, optionsteksten rettet. Changelog og manifest står allerede til .16. IKKE udgivet.
 - Venter på HA's debuglog (22:25-22:40, baggrundsjob skriver scratchpad `ha_debug.log`) for at bekræfte, at det er flytningen til HA's valg, der giver de to samtidige connects. Derefter: udgiv, installer, spørg Benjamin om genstart, mål 30 min ("unused" skal gå mod 0).
 - Bekræftet i HA's debuglog 22:25-22:34: 6 af 95 connects flyttede til HA's valg ("ha" på en navngiven proxy) og overlappede en anden connect på samme proxy, fx køkken 22:26:27 (timeout på hci0, 2. forsøg flyttet til bt-proxy-1 med in_progress=1).
+
+### .16 kører (20/11 22:44)
+
+- Udgivet, installeret (34 filer, md5 ens), HA genstartet 22:44 med Benjamins ja, `installed_version` v1.3.0-benjagit.16, ingen opstartsfejl. Debuglogning er slået fra igen.
+- Måling i gang 22:48-23:18 (baggrundsjob): "LUKKET UBRUGT" skal gå mod 0, og not found på bt-proxy-3 skal falde. Sammenlign med 21:54-22:24: 61 % / 62 % / 38 % ok, 5 ubrugte links.
+- bt-proxy's egen måling 22:33-23:03 er forstyrret af genstarten 22:44 (Benjamin valgte genstart nu).
+- Tilbage: Benjamin beslutter poll-intervallet (1 min nu); `_attr_temperature_unit` er forældet fra HA 2027.11; homeassistant-fanen w5:pH har kun svar for .9.
