@@ -2,6 +2,14 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.17 — fork: one connect attempt per poll
+
+- A poll makes one connect attempt instead of two. The proxies retry by
+  themselves within their 30 s, and a failed poll held its scanner for up to
+  80 s while the scanner's other thermostats waited. Measured with 18 valves on
+  1-minute polling: a poll took 2-4 minutes, most of it waiting for the
+  scanner.
+
 ## v1.3.0+benjagit.16 — fork: one connect per scanner, for real
 
 - A connect no longer moves to Home Assistant's pick when its scanner has lost

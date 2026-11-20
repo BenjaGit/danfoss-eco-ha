@@ -64,3 +64,10 @@
 - Måling i gang 22:48-23:18 (baggrundsjob): "LUKKET UBRUGT" skal gå mod 0, og not found på bt-proxy-3 skal falde. Sammenlign med 21:54-22:24: 61 % / 62 % / 38 % ok, 5 ubrugte links.
 - bt-proxy's egen måling 22:33-23:03 er forstyrret af genstarten 22:44 (Benjamin valgte genstart nu).
 - Tilbage: Benjamin beslutter poll-intervallet (1 min nu); `_attr_temperature_unit` er forældet fra HA 2027.11; homeassistant-fanen w5:pH har kun svar for .9.
+
+### .17 (20/11 ca. 23:35)
+
+- Måling af .16, 22:48-23:18: 62 % / 78 % / 72 % ok, 0 ubrugte links, not found 2 i alt. Tre Pi'er giver 5,1 ok/min (4,1 før i aften).
+- Fund: en aflæsning tager 2-4 min, mest kø bag proxyens lås (én connect ad gangen, 6-7 termostater pr. proxy). 1 min poll giver derfor ikke flere forsøg end ca. 3 min. Retry-stigen (60..900 s) er EKSTRA forsøg og er ikke årsagen; min første forklaring til Benjamin var forkert og er rettet over for ham.
+- .17: ét connect-forsøg pr. aflæsning (`CONNECT_ATTEMPTS = 1`). Udgives nu; genstart kræver Benjamins ja.
+- Ikke lavet, foreslået til senere: kø efter hvem der har ventet længst (asyncio.Lock er FIFO).
