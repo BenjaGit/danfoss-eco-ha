@@ -61,6 +61,7 @@ _stub(
     EtrvClient=object,
     EtrvError=Exception,
     last_connectable_signal=lambda *a: (None, None),
+    scanner_name=lambda hass, source: source,
 )
 
 

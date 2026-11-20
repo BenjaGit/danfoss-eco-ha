@@ -29,13 +29,14 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .ble import EtrvClient, EtrvError, last_connectable_signal
+from .ble import EtrvClient, EtrvError, last_connectable_signal, scanner_name
 from .const import (
     ADV_RETRY_MIN_INTERVAL_S,
     CONF_AUTO_TIME_SYNC,
     CONF_CACHE_TTL,
     CONF_PIN,
     CONF_POLL_INTERVAL,
+    CONF_PREFERRED_PROXY,
     CONF_QUEUE_TTL,
     CONF_SECRET_KEY,
     DEFAULT_AUTO_TIME_SYNC,
@@ -56,6 +57,7 @@ from .const import (
     DeviceMode,
 )
 from .pending import PendingWrites
+from .proxy import ProxyTracker
 from .protocol import DeviceTime, Errors, Schedule, Settings, Temperature
 
 _LOGGER = logging.getLogger(__name__)
@@ -109,11 +111,15 @@ class EtrvCoordinator(DataUpdateCoordinator[EtrvState]):
             ),
         )
         self.address: str = entry.data["address"]
+        # Connect record per Bluetooth proxy, and the proxy locked in the
+        # options if there is one.
+        self.proxies = ProxyTracker(entry.options.get(CONF_PREFERRED_PROXY))
         self.client = EtrvClient(
             hass,
             self.address,
             bytes.fromhex(entry.data[CONF_SECRET_KEY]),
             entry.options.get(CONF_PIN, entry.data.get(CONF_PIN, DEFAULT_PIN)),
+            self.proxies,
         )
         self._auto_time_sync = entry.options.get(
             CONF_AUTO_TIME_SYNC, DEFAULT_AUTO_TIME_SYNC
@@ -166,6 +172,7 @@ class EtrvCoordinator(DataUpdateCoordinator[EtrvState]):
         stored = await self._store.async_load()
         if not stored:
             return
+        self.proxies.load(stored.get("proxies"))
         self.pending = PendingWrites.from_dict(stored.get("pending"))
         self._expire_pending()
         if (synced := stored.get("last_time_sync")) is not None:
@@ -223,6 +230,7 @@ class EtrvCoordinator(DataUpdateCoordinator[EtrvState]):
         return {
             "state": state,
             "pending": self.pending.as_dict(),
+            "proxies": self.proxies.as_dict(),
             "last_time_sync": (
                 self.last_time_sync.isoformat() if self.last_time_sync else None
             ),
@@ -231,6 +239,24 @@ class EtrvCoordinator(DataUpdateCoordinator[EtrvState]):
     @callback
     def _schedule_save(self) -> None:
         self._store.async_delay_save(self._data_to_save, SAVE_DELAY_S)
+
+    async def async_save_now(self) -> None:
+        """Write the cache at once; a reload would lose a delayed save."""
+        await self._store.async_save(self._data_to_save())
+
+    @property
+    def proxy_attributes(self) -> dict[str, Any]:
+        """Which proxy the latest connect used, who chose it, and the records."""
+        proxies = self.proxies
+        return {
+            "proxy": scanner_name(self.hass, proxies.last_source),
+            "proxy_choice": proxies.last_choice,
+            "preferred_proxy": scanner_name(self.hass, proxies.locked),
+            "proxy_stats": {
+                scanner_name(self.hass, source): record
+                for source, record in proxies.summary().items()
+            },
+        }
 
     async def async_remove_cache(self) -> None:
         await self._store.async_remove()
@@ -248,6 +274,8 @@ class EtrvCoordinator(DataUpdateCoordinator[EtrvState]):
             self.consecutive_failures += 1
             self.last_error = str(err)
             self._arm_retry()
+            # The connect record changed even though the reading did not.
+            self._schedule_save()
             # Home Assistant skips the listeners when this update and the previous
             # one both failed, which froze the connection sensor's attributes at
             # the first failure. The first failure is left to Home Assistant.

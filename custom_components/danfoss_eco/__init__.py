@@ -117,6 +117,9 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: DanfossEcoConfigEntry) -> bool:
+    # The cache is saved with a delay; a reload (e.g. after changing options)
+    # reads the file again and would lose the latest connect records.
+    await entry.runtime_data.async_save_now()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 

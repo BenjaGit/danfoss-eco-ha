@@ -67,6 +67,7 @@ async def async_get_config_entry_diagnostics(
             "consecutive_failures": coordinator.consecutive_failures,
             "last_error": coordinator.last_error,
             "showing_cached_data": coordinator.is_stale,
+            **coordinator.proxy_attributes,
         },
         "pending_writes": coordinator.pending.as_dict(),
         "state": state,

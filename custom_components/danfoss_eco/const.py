@@ -18,6 +18,8 @@ CONF_POLL_INTERVAL = "poll_interval"
 CONF_AUTO_TIME_SYNC = "auto_time_sync"
 CONF_CACHE_TTL = "cache_ttl_hours"
 CONF_QUEUE_TTL = "queue_ttl_hours"
+# Scanner address (MAC) to connect through, or "auto" to use the learned one.
+CONF_PREFERRED_PROXY = "preferred_proxy"
 
 DEFAULT_PIN = 0
 DEFAULT_POLL_INTERVAL_MIN = 15

@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import struct
+import time
 from collections.abc import Callable
 
 from bleak.exc import BleakCharacteristicNotFoundError, BleakError
@@ -38,6 +39,7 @@ from .const import (
     UUID_TEMPERATURE,
 )
 from .crypto import EtrvCryptoError, etrv_decode, etrv_encode
+from .proxy import CHOICE_HA, ProxyTracker
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -78,6 +80,87 @@ def last_connectable_signal(
     return info.rssi, info.source
 
 
+def scanner_name(hass: HomeAssistant, source: str | None) -> str | None:
+    """Readable name of a scanner, or its address if it is gone."""
+    if source is None:
+        return None
+    scanner = bluetooth.async_scanner_by_source(hass, source)
+    return getattr(scanner, "name", None) or source
+
+
+def connectable_scanners(hass: HomeAssistant) -> dict[str, str]:
+    """Address and name of every scanner that can connect."""
+    return {
+        scanner.source: scanner.name
+        for scanner in bluetooth.async_current_scanners(hass)
+        if scanner.connectable
+    }
+
+
+def advert_ages(hass: HomeAssistant, address: str) -> dict[str, float]:
+    """Seconds since each connectable scanner last heard `address`."""
+    now = time.monotonic()
+    ages: dict[str, float] = {}
+    for device in bluetooth.async_scanner_devices_by_address(hass, address, True):
+        scanner = device.scanner
+        try:
+            seen = scanner.discovered_device_timestamps.get(address)
+        except Exception:  # noqa: BLE001 - scanner without timestamps
+            seen = None
+        # A scanner that lists the device without a timestamp still has it in
+        # its (short-lived) discovery table, so treat it as heard just now.
+        ages[scanner.source] = 0.0 if seen is None else max(0.0, now - seen)
+    return ages
+
+
+def routed_client_class(
+    address: str,
+    source: str | None,
+    choice: str,
+    attempts: list[tuple[str, str]],
+) -> type:
+    """Client class that connects through `source` instead of HA's pick.
+
+    Home Assistant's client wrapper ignores which scanner a BLEDevice came
+    from: on every connect it ranks all scanners that hear the address by
+    signal and free slots and takes the first. That ranking lives in one
+    method, which is replaced here. The scanner each connect attempt really
+    used is appended to `attempts` as (scanner, who chose it), also when Home
+    Assistant chose, so every attempt can be counted against the right proxy.
+    """
+
+    class RoutedClient(BleakClientWithServiceCache):
+        def _async_get_best_available_backend_and_device(self, manager):
+            backend = None
+            if source is not None:
+                try:
+                    for device in manager.async_scanner_devices_by_address(
+                        address, True
+                    ):
+                        if device.scanner.source == source:
+                            backend = self._async_get_backend_for_ble_device(
+                                manager, device.scanner, device.ble_device
+                            )
+                            break
+                except Exception as err:  # noqa: BLE001 - HA internals moved
+                    _LOGGER.debug("%s: cannot route via %s: %s", address, source, err)
+                    backend = None
+            via = choice
+            if backend is None:
+                # No such scanner any more, or it has no free slot.
+                via = CHOICE_HA
+                backend = super()._async_get_best_available_backend_and_device(
+                    manager
+                )
+            attempts.append((backend.scanner.source, via))
+            _LOGGER.debug(
+                "%s: connecting via %s (%s)", address, backend.scanner.name, via
+            )
+            return backend
+
+    return RoutedClient
+
+
 class EtrvError(Exception):
     """Communication failure."""
 
@@ -98,12 +181,19 @@ class EtrvClient:
     """Short-lived-connection client for one eTRV."""
 
     def __init__(
-        self, hass: HomeAssistant, address: str, secret_key: bytes | None, pin: int = 0
+        self,
+        hass: HomeAssistant,
+        address: str,
+        secret_key: bytes | None,
+        pin: int = 0,
+        tracker: ProxyTracker | None = None,
     ) -> None:
         self._hass = hass
         self.address = address
         self._key = secret_key
         self._pin = pin
+        # Without a tracker (pairing) Home Assistant picks the scanner.
+        self._tracker = tracker
 
     async def _connect(self) -> BleakClientWithServiceCache:
         ble_device = bluetooth.async_ble_device_from_address(
@@ -117,26 +207,58 @@ class EtrvClient:
             await close_stale_connections_by_address(self.address)
         except Exception:  # noqa: BLE001 - best effort
             pass
+        tracker = self._tracker
+        client_class: type = BleakClientWithServiceCache
+        attempts: list[tuple[str, str]] = []
+        if tracker is not None:
+            source, choice = tracker.choose(advert_ages(self._hass, self.address))
+            client_class = routed_client_class(
+                self.address, source, choice, attempts
+            )
         try:
             client = await establish_connection(
-                BleakClientWithServiceCache,
+                client_class,
                 ble_device,
                 self.address,
                 max_attempts=2,
             )
         except (BleakError, TimeoutError) as err:
+            self._count(attempts, connected=False)
             raise EtrvError(f"Cannot connect to {self.address}: {err}") from err
+        except BaseException:
+            # Cancelled mid-connect: the attempts made so far still failed.
+            self._count(attempts, connected=False)
+            raise
         try:
             pin_bytes = struct.pack(">I", self._pin)
             await client.write_gatt_char(UUID_PIN, pin_bytes, response=True)
         except BleakCharacteristicNotFoundError as err:
+            # The link itself worked; the stale service table is not the
+            # proxy's doing.
+            self._count(attempts, connected=True)
             await self._clear_service_cache(client)
             await client.disconnect()
             raise EtrvCharacteristicMissing(f"PIN write failed: {err}") from err
         except BleakError as err:
+            # Connected, but the link died before the first write went through.
+            self._count(attempts, connected=False)
             await client.disconnect()
             raise EtrvError(f"PIN write failed: {err}") from err
+        self._count(attempts, connected=True)
         return client
+
+    def _count(self, attempts: list[tuple[str, str]], *, connected: bool) -> None:
+        """Count each connect attempt against the scanner it went through.
+
+        Only the last attempt can have succeeded; any before it were retried.
+        """
+        if self._tracker is None:
+            return
+        for idx, (source, choice) in enumerate(attempts):
+            self._tracker.record(
+                source, connected and idx == len(attempts) - 1, choice
+            )
+        attempts.clear()
 
     async def _read(self, client, uuid: str, *, decode: bool = True) -> bytes:
         try:

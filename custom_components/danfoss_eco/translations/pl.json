@@ -78,7 +78,11 @@
           "pin": "PIN urządzenia (0 = brak)",
           "auto_time_sync": "Automatycznie synchronizuj zegar urządzenia",
           "cache_ttl_hours": "Przechowuj ostatni odczyt przez (godziny, 0 = bez limitu)",
-          "queue_ttl_hours": "Przechowuj niedostarczone polecenia przez (godziny, 0 = bez limitu)"
+          "queue_ttl_hours": "Przechowuj niedostarczone polecenia przez (godziny, 0 = bez limitu)",
+          "preferred_proxy": "Preferowane proxy Bluetooth"
+        },
+        "data_description": {
+          "preferred_proxy": "Łącz przez to proxy, jeśli słyszało termostat w ciągu ostatnich 10 minut. Automatycznie wybiera proxy z najlepszą skutecznością połączeń."
         }
       }
     }

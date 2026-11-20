@@ -82,4 +82,5 @@ class EtrvConnectionSensor(EtrvEntity, BinarySensorEntity):
             "consecutive_failures": coordinator.consecutive_failures,
             "last_error": coordinator.last_error,
             "showing_cached_data": coordinator.is_stale,
+            **coordinator.proxy_attributes,
         }
