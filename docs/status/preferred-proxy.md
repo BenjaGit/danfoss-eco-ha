@@ -29,3 +29,10 @@
 - Opgave sendt til bt-proxy-agenten (Herdr `bt-proxy`, svar kommer til pane wK:p1): find årsagen på Pi-siden og luk de tre uden genstart, hvis muligt.
 - Vores side: `_connect` lukkede ikke forbindelsen, når PIN-skrivningen løb ud eller blev annulleret. Rettet på grenen `fix/close-link-on-pin-timeout` (ikke udgivet, ikke deployet). Udgivelse som .15 kræver HA-genstart: spørg Benjamin.
 - Ikke bekræftet, at det var PIN-skrivningen, der udløste de tre: HA's log for tidspunktet er ikke læst (HAOS logger til journalen, ikke til /config).
+
+### Svar fra bt-proxy og HA's log (20/11 ca. 20:50)
+
+- De tre links blev lukket 20:43 med `bluetoothctl disconnect` på bt-proxy-1, uden genstart. Gæstetoilet er aflæst igen 20:45:33; kontor 2 og lager var endnu ikke forbundet igen ved tjekket.
+- bt-proxy v1.0.3-benjagit.9 (lukker et link uden GATT-aktivitet efter 60 s) er pushet, IKKE deployet: venter på Benjamins ja i bt-proxy-fanen.
+- HA's log: kl. 19:09:46.551 meldte koordinatoren "Error fetching" for kontor 2, samme øjeblik Pi'en startede det forsøg, der lykkedes 19:09:52. HA fik altså en fejl for forsøget og havde ingen klient at lukke; hverken annullering eller PIN-timeout. Rettelsen på `fix/close-link-on-pin-timeout` er derfor ikke årsagen til de tre, kun et lukket hul.
+- bt-proxy foreslår også: lad den samlede timeout dække to forsøg à 17 s (ca. 35 s). Ikke gjort.
