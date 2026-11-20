@@ -695,6 +695,71 @@ def test_thermostats_on_the_same_scanner_take_turns():
     assert _run_two_reads("A", "A") == 1
 
 
+def _served_order(waiting: list[tuple[str, float]], cancel: str | None = None) -> list[str]:
+    """Valves wait for a busy scanner; returns the order they get their turn."""
+    served: list[str] = []
+
+    async def run():
+        turn = ble._Turn()
+        await turn.acquire()
+
+        async def wait(name, last_read):
+            await turn.acquire(last_read)
+            served.append(name)
+            await asyncio.sleep(0)
+            turn.release()
+
+        tasks = {n: asyncio.ensure_future(wait(n, t)) for n, t in waiting}
+        await asyncio.sleep(0.01)
+        if cancel is not None:
+            tasks[cancel].cancel()
+            await asyncio.sleep(0)
+        turn.release()
+        await asyncio.gather(*tasks.values(), return_exceptions=True)
+        assert not turn.locked()
+
+    asyncio.run(run())
+    return served
+
+
+def test_the_valve_unread_the_longest_gets_the_scanner_first():
+    # Measured with 18 valves on 1-minute polling: a poll waited 2-4 minutes
+    # for its scanner, and a valve with five failures in a row had not been
+    # read for 25 minutes while valves read a minute ago went ahead of it.
+    order = _served_order([("fresh", 900.0), ("stale", 100.0), ("never", 0.0)])
+    assert order == ["never", "stale", "fresh"]
+
+
+def test_valves_read_at_the_same_time_keep_arrival_order():
+    assert _served_order([("a", 5.0), ("b", 5.0), ("c", 5.0)]) == ["a", "b", "c"]
+
+
+def test_a_cancelled_wait_does_not_hold_the_scanner():
+    order = _served_order([("stale", 100.0), ("fresh", 900.0)], cancel="stale")
+    assert order == ["fresh"]
+
+
+def _last_read_after(missing: set[str]) -> float:
+    etrv = ble.EtrvClient(None, "00:04:2F:00:00:00", KEY, 0)
+
+    async def connect():
+        return FakeClient(missing)
+
+    etrv._connect = connect
+    try:
+        asyncio.run(etrv.read_state())
+    except ble.EtrvError:
+        pass
+    finally:
+        ble._BLE_LOCKS.clear()
+    return etrv._last_read
+
+
+def test_only_a_successful_read_moves_the_valve_back_in_line():
+    assert _last_read_after(set()) > 0
+    assert _last_read_after({UUID_ERRORS}) == 0
+
+
 def test_connect_left_to_home_assistant_queues_behind_the_strongest_scanner():
     # Home Assistant connects through the best signal, so that scanner's lock
     # is the one to wait for; otherwise two valves would dial out through it.
