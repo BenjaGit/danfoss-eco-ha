@@ -272,9 +272,11 @@ scanner for each thermostat and connects through the one with the best record:
   Assistant chooses meanwhile.
 - When no scanner qualifies, Home Assistant chooses as before.
 
-Selecting a proxy in the options locks the thermostat to it. The lock overrides the
-learned choice and is never left to Home Assistant at random, but the 10-minute
-and 8-failures rules still apply, and then Home Assistant chooses.
+Selecting a proxy in the options locks the thermostat to it. A lock is absolute:
+every connect goes through that scanner, however often it fails. If the scanner is
+offline, does not hear the thermostat or has no free slot, the connect fails (the
+connection sensor's `last_error` says so) and is retried; it never moves to
+another scanner.
 
 The connection binary sensor shows the result:
 

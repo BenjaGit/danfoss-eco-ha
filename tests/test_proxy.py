@@ -107,10 +107,11 @@ def test_lock_works_without_any_record():
     assert _tracker(locked=NUC).choose(HEARD) == (NUC, proxy.CHOICE_LOCKED)
 
 
-def test_locked_scanner_that_has_not_heard_falls_back_to_home_assistant():
+def test_lock_holds_when_the_scanner_has_not_heard_the_thermostat():
     tracker = _tracker(locked=P2, records={P1: (50, 40)})
-    assert tracker.choose({P1: 5.0, P2: 601.0}) == (None, proxy.CHOICE_HA)
-    assert tracker.choose({P1: 5.0}) == (None, proxy.CHOICE_HA)
+    assert tracker.choose({P1: 5.0, P2: 601.0}) == (P2, proxy.CHOICE_LOCKED)
+    assert tracker.choose({P1: 5.0}) == (P2, proxy.CHOICE_LOCKED)
+    assert tracker.choose({}) == (P2, proxy.CHOICE_LOCKED)
 
 
 def test_automatic_is_not_a_lock():
@@ -143,14 +144,12 @@ def test_failures_in_a_row_rest_the_scanner_then_give_it_one_more_try():
     assert not tracker.is_benched(P1)
 
 
-def test_locked_scanner_that_keeps_failing_falls_back_to_home_assistant():
-    clock = Clock()
-    tracker = _tracker(locked=P1, clock=clock)
-    for _ in range(proxy.MAX_CONSECUTIVE_FAILURES):
+def test_lock_holds_however_many_connects_fail():
+    tracker = _tracker(locked=P1)
+    for _ in range(proxy.MAX_CONSECUTIVE_FAILURES * 3):
         assert tracker.choose(HEARD) == (P1, proxy.CHOICE_LOCKED)
         tracker.record(P1, False, proxy.CHOICE_LOCKED)
-    assert tracker.choose(HEARD) == (None, proxy.CHOICE_HA)
-    clock.t += proxy.BENCH_S + 1
+    assert tracker.is_benched(P1)
     assert tracker.choose(HEARD) == (P1, proxy.CHOICE_LOCKED)
 
 
