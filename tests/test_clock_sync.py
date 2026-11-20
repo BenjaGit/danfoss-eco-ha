@@ -60,7 +60,7 @@ _stub(
     "danfoss_eco.ble",
     EtrvClient=object,
     EtrvError=Exception,
-    last_connectable_signal=lambda *a: (None, None),
+    signal_via=lambda *a: (None, None),
     scanner_name=lambda hass, source: source,
     route=lambda *a, **k: (None, "ha"),
 )

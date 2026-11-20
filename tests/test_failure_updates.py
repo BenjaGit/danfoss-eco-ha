@@ -70,7 +70,7 @@ if "danfoss_eco.coordinator" not in sys.modules:
         "danfoss_eco.ble",
         EtrvClient=object,
         EtrvError=EtrvError,
-        last_connectable_signal=lambda *a: (None, None),
+        signal_via=lambda *a: (None, None),
         scanner_name=lambda hass, source: source,
         route=lambda *a, **k: (None, "ha"),
     )

@@ -91,6 +91,23 @@ def last_connectable_signal(
     return info.rssi, info.source
 
 
+def signal_via(
+    hass: HomeAssistant, address: str, source: str | None
+) -> tuple[int | None, str | None]:
+    """RSSI of `address` as heard by the scanner that just read it.
+
+    Each thermostat is read through a chosen scanner, which is often not the
+    one with the strongest signal, so the latest advertisement from any
+    scanner would describe a link that was not used. Falls back to that when
+    the scanner is unknown or no longer lists the thermostat.
+    """
+    if source is not None:
+        for device in bluetooth.async_scanner_devices_by_address(hass, address, True):
+            if device.scanner.source == source:
+                return device.advertisement.rssi, source
+    return last_connectable_signal(hass, address)
+
+
 def scanner_name(hass: HomeAssistant, source: str | None) -> str | None:
     """Readable name of a scanner, or its address if it is gone."""
     if source is None:
