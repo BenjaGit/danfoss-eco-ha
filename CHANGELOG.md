@@ -2,6 +2,13 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.9 — fork: fairer connect counting
+
+- A connect is counted once per scanner. The built-in retry was counted as a
+  second failure, although the proxy refuses it without trying.
+- A scanner is rested after 8 failed connects in a row instead of 3. Three in a
+  row are ordinary for these valves, so the best proxy was rested needlessly.
+
 ## v1.3.0+benjagit.8 — fork: preferred proxy
 
 - Each thermostat now connects through the Bluetooth proxy that works best for
@@ -12,7 +19,8 @@ All notable changes to this integration. Dates are release dates.
   strength alone.
 - New option **Preferred Bluetooth proxy**: lock a thermostat to one scanner.
   The lock overrides the learned choice.
-- A scanner that fails 3 connects in a row is rested for 30 minutes. If the
+- A scanner that fails 3 connects in a row (8 from benjagit.9) is rested for 30
+  minutes. If the
   chosen scanner is resting, has no free slot or has not heard the thermostat,
   Home Assistant chooses as before.
 - The connection sensor has new attributes: `proxy`, `proxy_choice` (`learned`,
