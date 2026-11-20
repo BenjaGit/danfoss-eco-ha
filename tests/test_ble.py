@@ -628,6 +628,42 @@ def test_locked_scanner_is_kept_after_queueing_even_if_it_lost_the_valve():
     assert not holds_b
 
 
+def test_a_poll_makes_one_connect_attempt():
+    # Measured: a failed poll with two attempts held its scanner for up to
+    # 80 s, and the proxies already retry inside one attempt.
+    seen = {}
+    etrv = ble.EtrvClient.__new__(ble.EtrvClient)
+    etrv.address = "00:04:2F:00:00:00"
+    etrv._key = KEY
+    etrv._pin = 0
+    etrv._tracker = None
+    etrv._hass = None
+
+    async def establish_connection(*args, **kwargs):
+        seen.update(kwargs)
+        return FakeClient(set())
+
+    async def close_stale(address):
+        pass
+
+    patched = {
+        "bluetooth": types.SimpleNamespace(
+            async_ble_device_from_address=lambda *a, **k: object()
+        ),
+        "establish_connection": establish_connection,
+        "close_stale_connections_by_address": close_stale,
+    }
+    saved = {name: getattr(ble, name) for name in patched}
+    try:
+        for name, value in patched.items():
+            setattr(ble, name, value)
+        asyncio.run(etrv._connect())
+    finally:
+        for name, value in saved.items():
+            setattr(ble, name, value)
+    assert seen["max_attempts"] == 1
+
+
 def test_connect_waits_longer_than_the_default_twenty_seconds():
     # bleak-retry-connector passes timeout=20; a good connect takes 9-14 s
     # and the proxies now allow about 30.

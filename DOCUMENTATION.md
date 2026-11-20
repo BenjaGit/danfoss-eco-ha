@@ -322,6 +322,8 @@ choice is then made again and the connect joins the new scanner's queue. A locke
 proxy is kept regardless.
 
 A connect waits up to 40 s for the scanner to answer. Good connects take 9-14 s.
+Each poll makes one attempt; a failed one is retried by the next poll, so the
+scanner is free for its other thermostats in between.
 
 ### Updating the secret key or PIN (reconfigure)
 

@@ -60,6 +60,10 @@ _BLE_LOCKS: dict[str | None, asyncio.Lock] = {}
 # more than 13 s, so the usual 20 s (and the proxies' former 15 s) cut off
 # connects that were about to succeed. Stays above the proxies' own limit.
 CONNECT_TIMEOUT_S = 40.0
+# One attempt per poll. The proxies retry by themselves inside their 30 s, so
+# a second attempt from here mostly repeated a failure while the scanner's
+# other thermostats waited: up to 80 s of its turn instead of 40.
+CONNECT_ATTEMPTS = 1
 # How many times a connect may change scanner while it waits in line.
 MAX_REROUTES = 2
 
@@ -348,7 +352,7 @@ class EtrvClient:
                 client_class,
                 ble_device,
                 self.address,
-                max_attempts=2,
+                max_attempts=CONNECT_ATTEMPTS,
             )
         except (BleakError, TimeoutError) as err:
             self._count(attempts, connected=False)
