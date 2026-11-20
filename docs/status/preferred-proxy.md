@@ -43,3 +43,10 @@
 - Deploy til HA kræver genstart: spørg Benjamin. Efter genstart: md5-tjek, og mål 30 min mod tallene før (40 min før 21:40: bt-proxy-1 197 forsøg/62 ok, -2 180/66, -3 135/34).
 - bt-proxy-agenten laver samtidig: connect-grænse 15 -> ca. 30 s og straks-genforsøg ved "dropped the link". Svar kommer til pane wK:p1.
 - Poll-interval stadig 1 min; sættes ned efter målingen (Benjamin beslutter værdien).
+
+### .15 kører (20/11 21:50)
+
+- HA genstartet 21:50 med Benjamins ja, `installed_version` v1.3.0-benjagit.15. bt-proxy v1.0.3-benjagit.10 (30 s pr. anmodning, genforsøg efter tabt link) kører på alle tre Pi'er fra 21:48-21:49.
+- Måling i gang: 30 min fra ca. 21:56, sammenlignes med 31 % / 37 % / 25 % ok (bt-proxy-1/-2/-3). bt-proxy tæller nu "Connecting to" pr. forsøg, så anmodninger = "Connected to" + "Failed to connect to".
+- Derefter: Benjamin beslutter poll-intervallet (står på 1 min).
+- Set ved opstart, ikke fra denne ændring: `EtrvClimate` bruger `_attr_temperature_unit`, som holder op med at virke i HA 2027.11.
