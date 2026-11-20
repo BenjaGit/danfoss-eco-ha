@@ -103,6 +103,9 @@
       },
       "pending_writes": {
         "name": "Ausstehende Befehle"
+      },
+      "proxy": {
+        "name": "Bluetooth-Proxy"
       }
     },
     "binary_sensor": {
@@ -162,6 +165,14 @@
       },
       "away_temperature": {
         "name": "Absenktemperatur (Schlaf / abwesend)"
+      }
+    },
+    "select": {
+      "preferred_proxy": {
+        "name": "Bevorzugter Proxy",
+        "state": {
+          "auto": "Automatisch"
+        }
       }
     }
   },

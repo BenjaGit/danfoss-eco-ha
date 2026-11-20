@@ -60,6 +60,14 @@
       },
       "schedule": {
         "default": "mdi:calendar-clock"
+      },
+      "proxy": {
+        "default": "mdi:bluetooth-connect"
+      }
+    },
+    "select": {
+      "preferred_proxy": {
+        "default": "mdi:bluetooth-settings"
       }
     }
   },

@@ -103,6 +103,9 @@
       },
       "pending_writes": {
         "name": "Oczekujące polecenia"
+      },
+      "proxy": {
+        "name": "Proxy Bluetooth"
       }
     },
     "binary_sensor": {
@@ -162,6 +165,14 @@
       },
       "away_temperature": {
         "name": "Temperatura obniżona (sen / poza domem)"
+      }
+    },
+    "select": {
+      "preferred_proxy": {
+        "name": "Preferowane proxy",
+        "state": {
+          "auto": "Automatycznie"
+        }
       }
     }
   },

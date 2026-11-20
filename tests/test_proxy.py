@@ -73,6 +73,20 @@ def test_one_in_ten_connects_is_left_to_home_assistant():
     assert left_to_ha == 100
 
 
+def test_assignment_is_the_choice_without_the_random_connects():
+    tracker = _tracker(roll=0.0, records={P1: (20, 9), P2: (20, 2)})
+    assert tracker.choose(HEARD) == (None, proxy.CHOICE_HA)
+    assert tracker.assigned(HEARD) == (P1, proxy.CHOICE_LEARNED)
+
+
+def test_lock_can_be_set_and_cleared_later():
+    tracker = _tracker(records={P1: (20, 9), P2: (20, 2)})
+    tracker.set_locked(P2)
+    assert tracker.choose(HEARD) == (P2, proxy.CHOICE_LOCKED)
+    tracker.set_locked(proxy.AUTO)
+    assert tracker.choose(HEARD) == (P1, proxy.CHOICE_LEARNED)
+
+
 def test_scanner_that_has_not_heard_the_thermostat_recently_is_skipped():
     tracker = _tracker(records={P1: (20, 9), P2: (20, 4)})
     heard = {P1: proxy.RECENT_ADVERT_S + 1, P2: 5.0}

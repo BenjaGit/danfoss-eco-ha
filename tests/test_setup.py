@@ -64,6 +64,7 @@ _stub(
         BUTTON="button",
         CLIMATE="climate",
         NUMBER="number",
+        SELECT="select",
         SENSOR="sensor",
         SWITCH="switch",
     ),
@@ -206,6 +207,49 @@ def test_first_poll_runs_in_background_once_started():
         task.cancel()
 
     asyncio.run(run())
+
+
+def _options_changed(old: dict, new: dict) -> tuple[list, list]:
+    """Run the options listener; returns (locks applied, reloads)."""
+    locks, reloads = [], []
+
+    async def reload(entry_id):
+        reloads.append(entry_id)
+
+    entry = FakeEntry()
+    entry.options = new
+    entry.runtime_data = types.SimpleNamespace(
+        applied_options=old, async_set_preferred_proxy=locks.append
+    )
+    hass = types.SimpleNamespace(
+        config_entries=types.SimpleNamespace(async_reload=reload)
+    )
+    asyncio.run(integration._async_update_listener(hass, entry))
+    return locks, reloads
+
+
+def test_locking_a_proxy_does_not_reload_the_entry():
+    # The lock is set from a dashboard select; a reload would drop every
+    # entity of the thermostat for a moment on each change.
+    locks, reloads = _options_changed(
+        {"poll_interval": 1}, {"poll_interval": 1, "preferred_proxy": "AA"}
+    )
+    assert (locks, reloads) == (["AA"], [])
+    locks, reloads = _options_changed(
+        {"poll_interval": 1, "preferred_proxy": "AA"},
+        {"poll_interval": 1, "preferred_proxy": "auto"},
+    )
+    assert (locks, reloads) == (["auto"], [])
+
+
+def test_other_option_changes_still_reload_the_entry():
+    locks, reloads = _options_changed(
+        {"poll_interval": 60}, {"poll_interval": 1, "preferred_proxy": "AA"}
+    )
+    assert (locks, reloads) == ([], ["entry"])
+    # A change that is not an option at all (e.g. the title) reloads as before.
+    locks, reloads = _options_changed({"poll_interval": 1}, {"poll_interval": 1})
+    assert (locks, reloads) == ([], ["entry"])
 
 
 if __name__ == "__main__":

@@ -72,6 +72,7 @@ if "danfoss_eco.coordinator" not in sys.modules:
         EtrvError=EtrvError,
         last_connectable_signal=lambda *a: (None, None),
         scanner_name=lambda hass, source: source,
+        route=lambda *a, **k: (None, "ha"),
     )
 
     def _load(name: str):

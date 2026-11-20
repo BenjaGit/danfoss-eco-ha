@@ -29,7 +29,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .ble import EtrvClient, EtrvError, last_connectable_signal, scanner_name
+from .ble import EtrvClient, EtrvError, last_connectable_signal, route, scanner_name
 from .const import (
     ADV_RETRY_MIN_INTERVAL_S,
     CONF_AUTO_TIME_SYNC,
@@ -111,6 +111,9 @@ class EtrvCoordinator(DataUpdateCoordinator[EtrvState]):
             ),
         )
         self.address: str = entry.data["address"]
+        # The options this coordinator was built from, so a later change can
+        # be told apart from one that needs a reload.
+        self.applied_options: dict[str, Any] = dict(entry.options)
         # Connect record per Bluetooth proxy, and the proxy locked in the
         # options if there is one.
         self.proxies = ProxyTracker(entry.options.get(CONF_PREFERRED_PROXY))
@@ -244,11 +247,26 @@ class EtrvCoordinator(DataUpdateCoordinator[EtrvState]):
         """Write the cache at once; a reload would lose a delayed save."""
         await self._store.async_save(self._data_to_save())
 
+    @callback
+    def async_set_preferred_proxy(self, source: str | None) -> None:
+        """Lock to a scanner (or back to automatic) without reloading."""
+        self.proxies.set_locked(source)
+        self.applied_options = dict(self.config_entry.options)
+        self.async_update_listeners()
+
+    @property
+    def assigned_proxy(self) -> tuple[str | None, str]:
+        """Scanner the next connect goes through, and who chose it."""
+        return route(self.hass, self.address, self.proxies, explore=False)
+
     @property
     def proxy_attributes(self) -> dict[str, Any]:
         """Which proxy the latest connect used, who chose it, and the records."""
         proxies = self.proxies
+        assigned, assigned_by = self.assigned_proxy
         return {
+            "assigned_proxy": scanner_name(self.hass, assigned),
+            "assigned_by": assigned_by,
             "proxy": scanner_name(self.hass, proxies.last_source),
             "proxy_choice": proxies.last_choice,
             "preferred_proxy": scanner_name(self.hass, proxies.locked),

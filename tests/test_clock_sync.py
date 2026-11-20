@@ -62,6 +62,7 @@ _stub(
     EtrvError=Exception,
     last_connectable_signal=lambda *a: (None, None),
     scanner_name=lambda hass, source: source,
+    route=lambda *a, **k: (None, "ha"),
 )
 
 

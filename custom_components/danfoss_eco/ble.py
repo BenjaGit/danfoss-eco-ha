@@ -10,10 +10,11 @@ stems from BlueZ hosts).
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import struct
 import time
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 
 from bleak.exc import BleakCharacteristicNotFoundError, BleakError
 from bleak_retry_connector import (
@@ -45,11 +46,21 @@ _LOGGER = logging.getLogger(__name__)
 
 CONNECT_TIMEOUT = 45.0
 
-# All eTRVs in a home usually share one Bluetooth proxy, and a proxy has very
-# few connection slots. Letting three thermostats dial out at the same time is
-# the fastest way to produce "no backend with an available connection slot", so
-# every connection this integration makes is serialized process-wide.
-_BLE_LOCK = asyncio.Lock()
+# A proxy has very few connection slots and one radio. Letting three
+# thermostats dial out through it at the same time is the fastest way to
+# produce "no backend with an available connection slot", so connections are
+# serialized per scanner. Different scanners connect side by side: with one
+# lock for the whole house, 18 valves at 12-15 s per attempt took 3.5 minutes
+# a round. The None key is for connects whose scanner is not known beforehand
+# (pairing, or a thermostat no scanner lists).
+_BLE_LOCKS: dict[str | None, asyncio.Lock] = {}
+
+
+def _lock_for(source: str | None) -> asyncio.Lock:
+    lock = _BLE_LOCKS.get(source)
+    if lock is None:
+        lock = _BLE_LOCKS[source] = asyncio.Lock()
+    return lock
 
 # After a write, re-read the characteristic we touched so the entity shows the
 # value the device actually accepted rather than the value we hoped for.
@@ -111,6 +122,35 @@ def advert_ages(hass: HomeAssistant, address: str) -> dict[str, float]:
         # its (short-lived) discovery table, so treat it as heard just now.
         ages[scanner.source] = 0.0 if seen is None else max(0.0, now - seen)
     return ages
+
+
+def strongest_scanner(hass: HomeAssistant, address: str) -> str | None:
+    """The connectable scanner that hears `address` best.
+
+    This is roughly the scanner Home Assistant would connect through. Naming
+    it up front lets a connect that is left to Home Assistant queue behind
+    that scanner's other connects instead of dialling out beside them.
+    """
+    devices = bluetooth.async_scanner_devices_by_address(hass, address, True)
+    if not devices:
+        return None
+    best = max(devices, key=lambda device: device.advertisement.rssi)
+    return best.scanner.source
+
+
+def route(
+    hass: HomeAssistant, address: str, tracker: ProxyTracker, *, explore: bool = True
+) -> tuple[str | None, str]:
+    """Scanner for a connect to `address`, and who chose it.
+
+    With explore off this is the standing assignment, without the occasional
+    connect left to Home Assistant.
+    """
+    ages = advert_ages(hass, address)
+    source, choice = tracker.choose(ages) if explore else tracker.assigned(ages)
+    if source is None:
+        source = strongest_scanner(hass, address)
+    return source, choice
 
 
 def routed_client_class(
@@ -194,6 +234,21 @@ class EtrvClient:
         self._pin = pin
         # Without a tracker (pairing) Home Assistant picks the scanner.
         self._tracker = tracker
+        self._route: tuple[str | None, str] = (None, CHOICE_HA)
+
+    @contextlib.asynccontextmanager
+    async def _slot(self) -> AsyncIterator[None]:
+        """Pick the scanner and wait for its turn.
+
+        The scanner is chosen before queueing, so thermostats bound for
+        different scanners do not wait for each other.
+        """
+        tracker = getattr(self, "_tracker", None)
+        self._route = (None, CHOICE_HA)
+        if tracker is not None:
+            self._route = route(self._hass, self.address, tracker)
+        async with _lock_for(self._route[0]):
+            yield
 
     async def _connect(self) -> BleakClientWithServiceCache:
         ble_device = bluetooth.async_ble_device_from_address(
@@ -211,7 +266,7 @@ class EtrvClient:
         client_class: type = BleakClientWithServiceCache
         attempts: list[tuple[str, str]] = []
         if tracker is not None:
-            source, choice = tracker.choose(advert_ages(self._hass, self.address))
+            source, choice = self._route
             client_class = routed_client_class(
                 self.address, source, choice, attempts
             )
@@ -334,7 +389,7 @@ class EtrvClient:
         The schedule is best-effort: devices that lack those characteristics
         still return state.
         """
-        async with _BLE_LOCK:
+        async with self._slot():
             client = await self._connect()
             try:
                 raw = await self._read_all(client)
@@ -376,7 +431,7 @@ class EtrvClient:
     async def read_name(self) -> str | None:
         from .protocol import parse_name
 
-        async with _BLE_LOCK:
+        async with self._slot():
             # Best effort: during pairing this runs right after the key read,
             # when the valve often refuses a second connection. A missing name
             # must not discard a key that was already retrieved.
@@ -399,7 +454,7 @@ class EtrvClient:
         pairing window is open, so callers should instruct the user to press
         the timer button right before/while this runs.
         """
-        async with _BLE_LOCK:
+        async with self._slot():
             client = await self._connect()
             try:
                 char = client.services.get_characteristic(UUID_SECRET_KEY)

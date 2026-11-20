@@ -279,12 +279,32 @@ The connection binary sensor shows the result:
 
 | Attribute | Meaning |
 |---|---|
+| `assigned_proxy` | The scanner the next connect goes through. |
+| `assigned_by` | Who chose it: `learned`, `locked` or `ha` (no scanner qualifies, so the strongest signal is used). |
 | `proxy` | The scanner the latest connect went through. |
 | `proxy_choice` | Who chose it: `learned`, `locked` or `ha`. |
 | `preferred_proxy` | The locked scanner, if one is set. |
 | `proxy_stats` | Per scanner: `attempts`, `successes`, `success_rate` and `benched` (resting after 8 failures in a row). |
 
+Two entities carry the same information for dashboards:
+
+| Entity | Meaning |
+|---|---|
+| `sensor.<name>_bluetooth_proxy` | The scanner the thermostat is assigned to right now. Attributes: `assigned_by`, `last_proxy`, `last_choice`. |
+| `select.<name>_preferred_proxy` | The lock: `auto` or one of the scanners that can connect. Same setting as the option above; changing it applies from the next connect, without a reload. |
+
 Pairing always uses Home Assistant's choice.
+
+### Connections run side by side, one per scanner
+
+Each scanner connects to one thermostat at a time, and different scanners work at
+the same time. A connect waits only for the other thermostats bound for the same
+scanner. With a single queue for the whole home, 18 valves at 12-15 s per attempt
+took about 3.5 minutes a round; three proxies and a local adapter cut that to
+roughly a quarter.
+
+A connect that is left to Home Assistant goes through the scanner with the
+strongest signal, so that it too can wait in that scanner's queue.
 
 ### Updating the secret key or PIN (reconfigure)
 
