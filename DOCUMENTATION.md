@@ -266,8 +266,12 @@ scanner for each thermostat and connects through the one with the best record:
   chooses, which is also how the counting starts.
 - The scanner must have heard a connectable advertisement from the thermostat
   within the last 10 minutes.
-- About 1 connect in 10 is left to Home Assistant, so the other scanners keep
-  being tried and the choice can change when a proxy is moved.
+- While a scanner that hears the thermostat is still unmapped, half the connects
+  go to the least-tried unmapped scanner. A scanner is mapped after 20 counted
+  connects, or after 10 without a single success. This runs by itself, also
+  when a proxy is added or moved, and reads are less frequent while it lasts.
+- After that, 1 connect in 10 goes to the scanner with the fewest counted
+  connects, so every record stays current and the choice can change.
 - After 8 failed connects in a row a scanner is rested for 30 minutes, and Home
   Assistant chooses meanwhile.
 - When no scanner qualifies, Home Assistant chooses as before.
@@ -285,9 +289,9 @@ The connection binary sensor shows the result:
 | `assigned_proxy` | The scanner the next connect goes through. |
 | `assigned_by` | Who chose it: `learned`, `locked` or `ha` (no scanner qualifies, so the strongest signal is used). |
 | `proxy` | The scanner the latest connect went through. |
-| `proxy_choice` | Who chose it: `learned`, `locked` or `ha`. |
+| `proxy_choice` | Who chose it: `learned`, `locked`, `explore` (measuring another scanner) or `ha`. |
 | `preferred_proxy` | The locked scanner, if one is set. |
-| `proxy_stats` | Per scanner: `attempts`, `successes`, `success_rate` and `benched` (resting after 8 failures in a row). |
+| `proxy_stats` | Per scanner: `attempts`, `successes`, `success_rate`, `benched` (resting after 8 failures in a row) and `mapped` (tried enough to be judged). |
 
 Two entities carry the same information for dashboards:
 
