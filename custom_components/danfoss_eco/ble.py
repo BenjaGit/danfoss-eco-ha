@@ -92,6 +92,13 @@ class _Turn:
     def locked(self) -> bool:
         return self._busy
 
+    @property
+    def load(self) -> int:
+        """Connects in hand or waiting for this scanner."""
+        return int(self._busy) + sum(
+            1 for waiter in self._waiters if not waiter[2].done()
+        )
+
     async def acquire(self, last_read: float = 0.0) -> None:
         """Wait for the turn. `last_read` is a monotonic time; 0 means never."""
         if not self._busy:
@@ -115,6 +122,15 @@ class _Turn:
                 waiter.set_result(None)
                 return
         self._busy = False
+
+
+def scanner_load() -> dict[str, int]:
+    """Connects in hand or waiting, per scanner."""
+    return {
+        source: turn.load
+        for source, turn in _BLE_LOCKS.items()
+        if source is not None and turn.load
+    }
 
 
 def _lock_for(source: str | None) -> _Turn:
@@ -251,7 +267,11 @@ def route(
     connect left to Home Assistant.
     """
     ages = advert_ages(hass, address)
-    source, choice = tracker.choose(ages) if explore else tracker.assigned(ages)
+    signals = scanner_signals(hass, address, RECENT_ADVERT_S)
+    if explore:
+        source, choice = tracker.choose(ages, signals, scanner_load())
+    else:
+        source, choice = tracker.assigned(ages, signals)
     if source is None:
         source = strongest_scanner(hass, address)
     return source, choice

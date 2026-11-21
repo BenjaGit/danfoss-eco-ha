@@ -256,30 +256,44 @@ Changing options reloads the entry (a brief reconnect).
 ### Preferred proxy
 
 Home Assistant connects through the scanner with the strongest signal and a free
-slot. For these valves signal strength is a poor guide: measured over 17 000
-connects in one home, a connect through a thermostat's best proxy succeeded 29 % of
-the time and through any other proxy 8 %.
+slot, chosen anew for every connect. The integration keeps the choice per
+thermostat instead, and with **Automatic** builds it from two things:
 
-With **Automatic**, the integration counts successful and failed connects per
-scanner for each thermostat and connects through the one with the best record:
+- **Signal.** How strongly a scanner hears the thermostat says most of it.
+  Measured in one home with four proxies and 18 valves, connects succeeded 86 % of
+  the time above −60 dBm, 49 % around −72 dBm, 20 % around −87 dBm and 1 % below
+  −90 dBm. The signal is known for every scanner all the time, so a new or moved
+  proxy is judged at once.
+- **Counted connects.** A scanner can hear a thermostat well and still connect
+  badly (a proxy on a steel rack next to an access point did). Every connect is
+  counted per scanner and corrects what the signal promised; from about five
+  connects on they weigh more than the signal.
 
-- A scanner is used once it has 5 counted connects. Until then Home Assistant
-  chooses, which is also how the counting starts.
+How the two are used:
+
+- **Old connects fade.** A connect counts half after 8 hours, a quarter after 16.
+  A proxy that was moved is judged on what it does now, without a reset.
+- **The scanner is drawn by chance, weighted by how good each may be.** One with
+  a long good record is nearly always used. One that looks promising but is barely
+  tried gets its share of connects, so it is found out. A hopeless one gets almost
+  none. There is no separate mapping phase.
+- **A busy scanner gives way.** Each connect already waiting for a scanner lowers
+  its score, so two scanners that are nearly as good share the thermostats, and a
+  busy good one still beats a poor free one.
 - The scanner must have heard a connectable advertisement from the thermostat
   within the last 90 seconds.
 - A connect stays on the scanner it was given. If that scanner has lost the
   thermostat or has no free slot, the connect fails and the next one chooses
   again; it does not move to another scanner, which may be busy with another
   thermostat.
-- While a scanner that hears the thermostat is still unmapped, half the connects
-  go to the least-tried unmapped scanner. A scanner is mapped after 20 counted
-  connects, or after 10 without a single success. This runs by itself, also
-  when a proxy is added or moved, and reads are less frequent while it lasts.
-- After that, 1 connect in 10 goes to the scanner with the fewest counted
-  connects, so every record stays current and the choice can change.
-- After 8 failed connects in a row a scanner is rested for 30 minutes, and Home
-  Assistant chooses meanwhile.
-- When no scanner qualifies, Home Assistant chooses as before.
+- After a run of failed connects that would be unlikely by chance (8 in a row for
+  a good scanner, up to 16 for a weak one) a scanner is rested for 30 minutes.
+  If it was the thermostat's best, Home Assistant chooses meanwhile.
+- When no scanner hears the thermostat, Home Assistant chooses as before.
+
+To forget the counted connects at once, press **Reset proxy statistics** on the
+device, or call `danfoss_eco.reset_proxy_stats` (without a device it resets every
+thermostat). The choice then starts again from the signal.
 
 Selecting a proxy in the options locks the thermostat to it. A lock is absolute:
 every connect goes through that scanner, however often it fails. If the scanner is
@@ -292,11 +306,11 @@ The connection binary sensor shows the result:
 | Attribute | Meaning |
 |---|---|
 | `assigned_proxy` | The scanner the next connect goes through. |
-| `assigned_by` | Who chose it: `learned`, `locked` or `ha` (no scanner qualifies, so the strongest signal is used). |
+| `assigned_by` | Who chose it: `learned` (from counted connects), `signal` (fewer than 5 connects counted, so the signal decides), `locked` or `ha` (no scanner hears the thermostat, or its best one is resting). |
 | `proxy` | The scanner the latest connect went through. |
-| `proxy_choice` | Who chose it: `learned`, `locked`, `explore` (measuring another scanner) or `ha`. |
+| `proxy_choice` | Who chose it: `learned`, `signal`, `locked`, `explore` (another scanner than the assigned one, by chance or because the assigned one was busy) or `ha`. |
 | `preferred_proxy` | The locked scanner, if one is set. |
-| `proxy_stats` | Per scanner: `attempts`, `successes`, `success_rate`, `benched` (resting after 8 failures in a row) and `mapped` (tried enough to be judged). |
+| `proxy_stats` | Per scanner: `attempts` and `successes` (faded: recent connects in full, older ones in part), `success_rate`, `expected` (the rate the choice works with, signal and connects combined), `signal` (dBm, if heard in the last two minutes), `benched` (resting) and `mapped` (at least 5 connects counted). |
 
 Two entities carry the same information for dashboards:
 

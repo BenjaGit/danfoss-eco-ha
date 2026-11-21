@@ -82,7 +82,7 @@
           "preferred_proxy": "Preferred Bluetooth proxy"
         },
         "data_description": {
-          "preferred_proxy": "Connect through this proxy only. Automatic uses the proxy with the best connect record."
+          "preferred_proxy": "Connect only through this proxy. Automatic uses the proxy expected to connect most often, from signal strength and recent connects."
         }
       }
     }
@@ -128,6 +128,9 @@
       },
       "discard_pending": {
         "name": "Discard pending commands"
+      },
+      "reset_proxy_stats": {
+        "name": "Reset proxy statistics"
       }
     },
     "switch": {
@@ -231,6 +234,16 @@
         "days": {
           "name": "Days",
           "description": "7 lists (Mon..Sun) of 'HH:MM' transition times; before the first time each day the device is in setback."
+        }
+      }
+    },
+    "reset_proxy_stats": {
+      "name": "Reset proxy statistics",
+      "description": "Forgets the counted connects per Bluetooth proxy, so the choice of proxy starts again from the signal. Use after moving a proxy.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The thermostat to reset. Leave empty to reset all thermostats."
         }
       }
     }

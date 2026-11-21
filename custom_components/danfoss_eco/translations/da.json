@@ -82,7 +82,7 @@
           "preferred_proxy": "Foretrukken proxy"
         },
         "data_description": {
-          "preferred_proxy": "Forbind kun gennem denne proxy. Automatisk bruger den proxy, der oftest får forbindelse."
+          "preferred_proxy": "Forbind kun gennem denne proxy. Automatisk bruger den proxy, der forventes at få forbindelse oftest, ud fra signalstyrke og de seneste forbindelser."
         }
       }
     }
@@ -128,6 +128,9 @@
       },
       "discard_pending": {
         "name": "Kassér ventende kommandoer"
+      },
+      "reset_proxy_stats": {
+        "name": "Nulstil proxy-statistik"
       }
     },
     "switch": {
@@ -231,6 +234,16 @@
         "days": {
           "name": "Dage",
           "description": "7 lister (man..søn) med 'HH:MM'-skiftetider; før den første tid er enheden i sænkning."
+        }
+      }
+    },
+    "reset_proxy_stats": {
+      "name": "Nulstil proxy-statistik",
+      "description": "Glemmer de talte forbindelser pr. Bluetooth-proxy, så valget af proxy begynder forfra ud fra signalet. Bruges, når en proxy er flyttet.",
+      "fields": {
+        "device_id": {
+          "name": "Enhed",
+          "description": "Termostaten der skal nulstilles. Lad feltet stå tomt for at nulstille alle termostater."
         }
       }
     }

@@ -446,13 +446,19 @@ def test_no_choice_leaves_the_scanner_to_home_assistant_and_records_it():
     assert attempts == [("A", "ha")]
 
 
+def _counted(stats) -> tuple[int, int]:
+    """Attempts and successes of a record; the counts fade, so round them."""
+    return round(stats.successes + stats.failures), round(stats.successes)
+
+
 def _connect_with_tracker(outcomes: list[bool], pin_error: Exception | None = None):
     """Run _connect with a tracker; each outcome is one connect attempt via "B"."""
     proxy = sys.modules["danfoss_eco.proxy"]
-    tracker = proxy.ProxyTracker(rng=lambda: 0.99)
-    for _ in range(proxy.MIN_ATTEMPTS):
+    tracker = proxy.ProxyTracker(sample=lambda a, b: a / (a + b))
+    # One more than the minimum: the counts fade a little between connects.
+    for _ in range(proxy.MIN_ATTEMPTS + 1):
         tracker.record("B", True)
-    before = tracker.stats["B"].attempts
+    before = _counted(tracker.stats["B"])[0]
 
     class PinClient(FakeClient):
         async def write_gatt_char(self, uuid, data, response=True):
@@ -478,6 +484,7 @@ def _connect_with_tracker(outcomes: list[bool], pin_error: Exception | None = No
         "establish_connection": establish_connection,
         "close_stale_connections_by_address": close_stale,
         "advert_ages": lambda hass, address: {"A": 1.0, "B": 2.0},
+        "scanner_signals": lambda hass, address, max_age=None: {},
         "BleakClientWithServiceCache": FakeHaClient,
     }
     etrv = ble.EtrvClient(None, "00:04:2F:00:00:00", KEY, 0, tracker)
@@ -498,7 +505,8 @@ def _connect_with_tracker(outcomes: list[bool], pin_error: Exception | None = No
         for name, value in saved.items():
             setattr(ble, name, value)
     stats = tracker.stats["B"]
-    return stats.attempts - before, stats.successes - before, tracker, error
+    attempts, successes = _counted(stats)
+    return attempts - before, successes - before, tracker, error
 
 
 def test_successful_connect_is_counted_for_the_scanner_used():
@@ -529,8 +537,8 @@ def test_connect_that_moved_to_another_scanner_counts_both():
     tracker = proxy.ProxyTracker()
     etrv = ble.EtrvClient(None, "00:04:2F:00:00:00", KEY, 0, tracker)
     etrv._count([("B", "learned"), ("A", "ha")], connected=True)
-    assert (tracker.stats["B"].attempts, tracker.stats["B"].successes) == (1, 0)
-    assert (tracker.stats["A"].attempts, tracker.stats["A"].successes) == (1, 1)
+    assert _counted(tracker.stats["B"]) == (1, 0)
+    assert _counted(tracker.stats["A"]) == (1, 1)
     assert (tracker.last_source, tracker.last_choice) == ("A", "ha")
 
 
@@ -810,46 +818,55 @@ def test_only_a_successful_read_moves_the_valve_back_in_line():
     assert _last_read_after({UUID_ERRORS}) == 0
 
 
-def test_connect_left_to_home_assistant_queues_behind_the_strongest_scanner():
-    # Home Assistant connects through the best signal, so that scanner's lock
-    # is the one to wait for; otherwise two valves would dial out through it.
+def test_route_reads_signal_and_queue_and_names_the_scanner_for_the_lock():
+    # The scanner is named before queueing, so the connect waits for that
+    # scanner's turn; otherwise two valves would dial out through it.
     proxy = sys.modules["danfoss_eco.proxy"]
+    now = ble.time.monotonic()
 
     def device(source, rssi):
         return types.SimpleNamespace(
             scanner=types.SimpleNamespace(
-                source=source, discovered_device_timestamps={}
+                source=source,
+                discovered_device_timestamps={"00:04:2F:00:00:00": now - 3},
             ),
             advertisement=types.SimpleNamespace(rssi=rssi),
         )
 
-    saved = ble.bluetooth
+    def tracker():
+        return proxy.ProxyTracker(sample=lambda a, b: a / (a + b))
+
+    saved = ble.bluetooth, dict(ble._BLE_LOCKS)
+    ble._BLE_LOCKS.clear()
     ble.bluetooth = types.SimpleNamespace(
         async_scanner_devices_by_address=lambda hass, address, connectable: [
-            device("A", -80),
-            device("B", -62),
+            device("A", -74),
+            device("B", -66),
         ]
     )
     try:
-        # No records yet: nothing is proven, so Home Assistant chooses. The
-        # draw is fixed above the mapping share; a lower one would send this
-        # connect to an unmapped scanner instead.
-        def tracker():
-            return proxy.ProxyTracker(rng=lambda: 0.99)
-
-        assert ble.route(None, "00:04:2F:00:00:00", tracker()) == (
+        # Nothing counted yet: the stronger signal decides.
+        assert ble.route(None, "00:04:2F:00:00:00", tracker()) == ("B", "signal")
+        # Two connects already wait for "B": this one goes through "A", but
+        # the standing assignment stays "B".
+        turn = ble._lock_for("B")
+        turn._busy = True
+        turn._waiters.append((0.0, 0, types.SimpleNamespace(done=lambda: False)))
+        assert ble.scanner_load() == {"B": 2}
+        assert ble.route(None, "00:04:2F:00:00:00", tracker()) == ("A", "explore")
+        assert ble.route(None, "00:04:2F:00:00:00", tracker(), explore=False) == (
             "B",
-            "ha",
+            "signal",
         )
+        # No scanner hears the valve: Home Assistant is left to choose.
         ble.bluetooth = types.SimpleNamespace(
             async_scanner_devices_by_address=lambda *a: []
         )
-        assert ble.route(None, "00:04:2F:00:00:00", tracker()) == (
-            None,
-            "ha",
-        )
+        assert ble.route(None, "00:04:2F:00:00:00", tracker()) == (None, "ha")
     finally:
-        ble.bluetooth = saved
+        ble.bluetooth = saved[0]
+        ble._BLE_LOCKS.clear()
+        ble._BLE_LOCKS.update(saved[1])
 
 
 class RecordingClient(FakeClient):

@@ -82,7 +82,7 @@
           "preferred_proxy": "Bevorzugter Bluetooth-Proxy"
         },
         "data_description": {
-          "preferred_proxy": "Nur über diesen Proxy verbinden. Automatisch nutzt den Proxy mit der besten Verbindungsquote."
+          "preferred_proxy": "Nur über diesen Proxy verbinden. Automatisch nutzt den Proxy, der voraussichtlich am häufigsten eine Verbindung bekommt, nach Signalstärke und den letzten Verbindungen."
         }
       }
     }
@@ -128,6 +128,9 @@
       },
       "discard_pending": {
         "name": "Ausstehende Befehle verwerfen"
+      },
+      "reset_proxy_stats": {
+        "name": "Proxy-Statistik zurücksetzen"
       }
     },
     "switch": {
@@ -231,6 +234,16 @@
         "days": {
           "name": "Tage",
           "description": "7 Listen (Mo..So) mit 'HH:MM'-Umschaltzeiten; vor der ersten Zeit ist das Gerät im Absenkbetrieb."
+        }
+      }
+    },
+    "reset_proxy_stats": {
+      "name": "Proxy-Statistik zurücksetzen",
+      "description": "Vergisst die gezählten Verbindungen pro Bluetooth-Proxy, sodass die Wahl des Proxys wieder beim Signal beginnt. Nach dem Umstellen eines Proxys verwenden.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Der Thermostat, der zurückgesetzt wird. Leer lassen, um alle Thermostate zurückzusetzen."
         }
       }
     }
