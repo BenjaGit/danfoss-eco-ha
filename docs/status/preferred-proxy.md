@@ -2,20 +2,25 @@
 
 ## Næste skridt
 
-Stand 20/11-2026 kl. 23:50: HA kører v1.3.0+benjagit.18, bt-proxy v1.0.3-benjagit.11 på alle
-tre Pi'er, alle 18 termostater på auto med poll-interval 10 min (sat 23:47 via options-flow,
-18 af 18 `loaded`). Benjamin ser på det igen 21/11.
+Stand 21/11-2026 kl. 10:40: ny kortlægning er startet fra nul med alle rettelser (HA
+v1.3.0+benjagit.18, bt-proxy v1.0.3-benjagit.11). Benjamin bad om det, fordi de gamle tal mest
+viste proxy-logikkens fejl før 22:50 den 20/11 (fx valgte kontor 1 Gildesalen 23 % frem for
+Kontoret 20 %, mens tallene efter rettelserne var 28 % mod 43 %).
 
-1. **Mål natten over på 10 min:** hvor friske er aflæsningerne, og lukker Pi'erne stadig 0
-   ubrugte links ("Closing … unused" i journalen)? Sammenlign med .16 på 1 min: 62/78/72 % ok
-   på bt-proxy-1/-2/-3, 5,1 ok/min, 16 af 18 aflæst inden for 5 min. .17 og .18 er ikke målt
-   hver for sig (.17 kørte kun 23:27-23:41).
-2. **Poll-intervallet endeligt:** 10 min er Benjamins valg for natten; før testen var det 60
-   (`/config/danfoss_eco_store_backup_20261120/options_before_1min.json` på HA).
-3. **Tabt link under opkobling** er nu største fejl (radioforhold). Idéer, ikke besluttet:
-   USB-Bluetooth-dongle eller kablet net på Pi'erne, flytte en Pi nærmere stue vest/kontor 1.
+- 10:29-10:30: HA stoppet, `proxies` tømt i alle 18 store-filer (68 poster), HA startet.
+  Kopi af filerne og options: `/config/danfoss_eco_store_backup_20261121/` på HA.
+- 10:3x: poll-interval sat til 1 min på alle 18 via options-flow (før: 10). Alle på auto.
+- Indeklimatesten startede samtidig (ca. 10:30); nuc-pve var nede ca. 03:00-08:00 i nat.
+
+1. **Se på kortlægningen** om et par timer: færdig, når `proxy_stats.mapped` er true for alle par
+   (ingen "…" på `/lovelace/termostat-proxy`). Sammenlign valgene med de gamle, især kontor 1,
+   stue vest, gildesal vest midt og makerspace.
+2. **Sæt poll-intervallet ned igen**, når kortlægningen er færdig; Benjamin beslutter værdien
+   (10 min kørte i nat, 60 før testen).
+3. **Tabt link under opkobling** er største fejl (radioforhold). Idéer, ikke besluttet:
+   USB-Bluetooth-dongle eller kablet net på Pi'erne, flytte en Pi.
 4. **Småting:** `EtrvClimate` bruger `_attr_temperature_unit` (forældet fra HA 2027.11);
-   homeassistant-fanen w5:pH har kun fået svar for .9.
+   homeassistant-fanen w5:pH har kun fået svar for .9; .17 og .18 er ikke målt hver for sig.
 
 ## Status 20/11 kl. 19:10
 
