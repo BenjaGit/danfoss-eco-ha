@@ -8,7 +8,11 @@ spørg Benjamin, nulstil så statistikken (kræver HA-stop) og sammenlign en lig
 (2,5 time, 1 minuts poll). Benjamin svarede "Vent" på nulstilling kl. 14:15. Besked fra
 bt-proxy-agenten: bt-proxy-2 står på racket siden ca. 13:37 (26 % ok 13:41–14:21, hører ikke
 gildesal nord), er væk fra HA siden 14:28 (forkert VLAN), og lægges på kabel og genstartes;
-agenten skriver, når den er stabil. Nulstil ikke før da. Indeklimatesten sluttede 12:50; genstart kræver stadig et ja hver gang.
+agenten skriver, når den er stabil. bt-proxy-2 stabil på kabel fra 14:42:52.
+**Efter-måling startet 21/11 kl. 15:30** (Benjamin sagde ja): statistik nulstillet med HA stoppet
+15:28–15:30, kopi af tallene før i `/config/danfoss_eco_store_backup_20261121_after_move/` på HA.
+Sammenlign 15:30–17:56 med før-billedet (10:30–12:56); bt-proxy-2's forbindelsesinterval-forsøg
+(6/12/200) er væk siden 13:37, og NUC'ens Bluetooth er stadig tændt. Indeklimatesten sluttede 12:50; genstart kræver stadig et ja hver gang.
 
 Stand 21/11-2026 kl. 10:40: ny kortlægning er startet fra nul med alle rettelser (HA
 v1.3.0+benjagit.18, bt-proxy v1.0.3-benjagit.11). Benjamin bad om det, fordi de gamle tal mest
