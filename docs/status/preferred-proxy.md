@@ -19,7 +19,15 @@ https://claude.ai/artifact/8zHRj6Cx9XyqC8XrVpW7XG (kopi: `placements-2026-11-21.
 i cm, husplanens SVG-koordinater). Afstandsmodel fra målingerne: samme etage ≤5 m ca. 78 %, 5–7 m
 58 %, 7–9 m 48 %, 9–12 m 31 %; gennem etagedæk ≤3 m 72 %, 3–5 m 60 %, 5–7 m 32 %, >7 m ca. 5 %.
 Anbefaling givet 21/11 aften: en fjerde Pi på gildesalens vestvæg mellem vest nord og vest midt
-(kælder, x 390, y 1450); Benjamin har ikke besluttet noget. Poll står stadig på 1 minut. Indeklimatesten sluttede 12:50; genstart kræver stadig et ja hver gang.
+(kælder, x 390, y 1450); Benjamin har ikke besluttet noget. Poll står stadig på 1 minut.
+21/11 kl. 21:24: v1.3.0+benjagit.19 kører (signalsensor pr. termostat pr. scanner, 54 stk.,
+`sensor.<område>_radiator_<navn>_signal_bt_proxy_N`, 1 prøve i minuttet, historik i HA's recorder).
+Benjamin valgte at beholde 1 minuts poll. Benjamins kritik: forbindelsesraten siden nulstilling er
+en dårlig målestok for placering; brug signal (RSSI) til placering, alder på seneste aflæsning til
+drift, og et glidende vindue til proxyvalget (de to sidste er ikke lavet). Første matrix kl. 21:28:
+bt-proxy-2 hører køkken −73, spisestue −71, trappeopgang −69, men får kun 40–52 % forbindelser;
+bt-proxy-1 og -3 får 65–90 % ved samme signal. Mistanke: støj ved racket (AP-Rack 40 cm fra Pi'en,
+zigbee-antenne, stålplade). Ikke afprøvet. NUC'ens hci0 findes ikke som scanner i HA. Indeklimatesten sluttede 12:50; genstart kræver stadig et ja hver gang.
 
 Stand 21/11-2026 kl. 10:40: ny kortlægning er startet fra nul med alle rettelser (HA
 v1.3.0+benjagit.18, bt-proxy v1.0.3-benjagit.11). Benjamin bad om det, fordi de gamle tal mest
