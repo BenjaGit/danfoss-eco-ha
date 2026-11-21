@@ -2,9 +2,10 @@
 
 ## Næste skridt
 
-**INGEN genstart af HA før efter kl. 12:50 den 21/11-2026** (Benjamin, kl. ca. 10:45):
-indeklimatesten kører til 12:50, og nulstillingen 10:29 ramte dens start. Heller ingen
-genindlæsning af integrationen eller ændring af options i det tidsrum uden at spørge.
+21/11 kl. 12:56: før-billede gemt, inden Benjamin flytter bt-proxy-3 (op på skabet) og
+bt-proxy-2 (teknikrummet): `baseline-2026-11-21-before-move.md` + `.json`. Efter flytningen:
+spørg Benjamin, nulstil så statistikken (kræver HA-stop) og sammenlign en lige så lang periode
+(2,5 time, 1 minuts poll). Indeklimatesten sluttede 12:50; genstart kræver stadig et ja hver gang.
 
 Stand 21/11-2026 kl. 10:40: ny kortlægning er startet fra nul med alle rettelser (HA
 v1.3.0+benjagit.18, bt-proxy v1.0.3-benjagit.11). Benjamin bad om det, fordi de gamle tal mest
