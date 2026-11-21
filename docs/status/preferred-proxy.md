@@ -27,7 +27,10 @@ en dårlig målestok for placering; brug signal (RSSI) til placering, alder på 
 drift, og et glidende vindue til proxyvalget (de to sidste er ikke lavet). Første matrix kl. 21:28:
 bt-proxy-2 hører køkken −73, spisestue −71, trappeopgang −69, men får kun 40–52 % forbindelser;
 bt-proxy-1 og -3 får 65–90 % ved samme signal. Mistanke: støj ved racket (AP-Rack 40 cm fra Pi'en,
-zigbee-antenne, stålplade). Ikke afprøvet. NUC'ens hci0 findes ikke som scanner i HA. Indeklimatesten sluttede 12:50; genstart kræver stadig et ja hver gang.
+zigbee-antenne, stålplade). Ikke afprøvet. NUC'ens hci0 blev fjernet fra HA ca. 15:25 den 21/11 (oplyst af
+homeassistant-agenten), altså før efter-målingen. Dashboardet /lovelace/termostat-proxy har fra 22:06
+en signalmatrix og en graf pr. proxy (homeassistant-agenten). En fjerde Pi, bt-proxy-4, er oprettet
+af bt-proxy-agenten og har signalsensorer, men var offline kl. 22:02 (flyttes formentlig). Indeklimatesten sluttede 12:50; genstart kræver stadig et ja hver gang.
 
 Stand 21/11-2026 kl. 10:40: ny kortlægning er startet fra nul med alle rettelser (HA
 v1.3.0+benjagit.18, bt-proxy v1.0.3-benjagit.11). Benjamin bad om det, fordi de gamle tal mest
