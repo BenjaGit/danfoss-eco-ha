@@ -29,7 +29,14 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .ble import EtrvClient, EtrvError, route, scanner_name, signal_via
+from .ble import (
+    EtrvClient,
+    EtrvError,
+    route,
+    scanner_name,
+    scanner_signals,
+    signal_via,
+)
 from .const import (
     ADV_RETRY_MIN_INTERVAL_S,
     CONF_AUTO_TIME_SYNC,
@@ -272,9 +279,17 @@ class EtrvCoordinator(DataUpdateCoordinator[EtrvState]):
             "preferred_proxy": scanner_name(self.hass, proxies.locked),
             "proxy_stats": {
                 scanner_name(self.hass, source): record
-                for source, record in proxies.summary().items()
+                for source, record in proxies.summary(
+                    scanner_signals(self.hass, self.address)
+                ).items()
             },
         }
+
+    async def async_reset_proxy_stats(self) -> None:
+        """Forget the counted connects, e.g. after proxies were moved."""
+        self.proxies.reset()
+        await self.async_save_now()
+        self.async_update_listeners()
 
     async def async_remove_cache(self) -> None:
         await self._store.async_remove()

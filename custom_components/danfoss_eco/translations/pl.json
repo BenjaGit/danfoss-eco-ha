@@ -82,7 +82,7 @@
           "preferred_proxy": "Preferowane proxy Bluetooth"
         },
         "data_description": {
-          "preferred_proxy": "Łącz wyłącznie przez to proxy. Automatycznie wybiera proxy z najlepszą skutecznością połączeń."
+          "preferred_proxy": "Łącz tylko przez to proxy. Tryb automatyczny używa proxy, które według siły sygnału i ostatnich połączeń łączy się najczęściej."
         }
       }
     }
@@ -128,6 +128,9 @@
       },
       "discard_pending": {
         "name": "Odrzuć oczekujące polecenia"
+      },
+      "reset_proxy_stats": {
+        "name": "Wyzeruj statystyki proxy"
       }
     },
     "switch": {
@@ -231,6 +234,16 @@
         "days": {
           "name": "Dni",
           "description": "7 list (pon..niedz) czasów 'HH:MM'; przed pierwszym czasem dnia urządzenie jest w trybie obniżonym."
+        }
+      }
+    },
+    "reset_proxy_stats": {
+      "name": "Wyzeruj statystyki proxy",
+      "description": "Zapomina policzone połączenia dla każdego proxy Bluetooth, więc wybór proxy zaczyna się od nowa od siły sygnału. Użyj po przeniesieniu proxy.",
+      "fields": {
+        "device_id": {
+          "name": "Urządzenie",
+          "description": "Termostat do wyzerowania. Pozostaw puste, aby wyzerować wszystkie termostaty."
         }
       }
     }

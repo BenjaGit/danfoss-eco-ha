@@ -34,6 +34,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 SERVICE_SET_VACATION = "set_vacation"
 SERVICE_SYNC_TIME = "sync_time"
 SERVICE_SET_SCHEDULE = "set_schedule"
+SERVICE_RESET_PROXY_STATS = "reset_proxy_stats"
 
 _VACATION_SCHEMA = vol.Schema(
     {
@@ -183,6 +184,27 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 days[idx] = sorted(_hhmm_to_mark(m) for m in marks)
             await coordinator.async_set_schedule_days(days)
 
+    async def _reset_proxy_stats(call: ServiceCall) -> None:
+        # One thermostat, or all of them: moving a proxy changes every
+        # thermostat's records at once.
+        device_id = call.data.get("device_id")
+        if device_id:
+            coordinators = [_coordinator_for_device(hass, device_id)]
+        else:
+            coordinators = [
+                entry.runtime_data
+                for entry in hass.config_entries.async_entries(DOMAIN)
+                if hasattr(entry, "runtime_data")
+            ]
+        for coordinator in coordinators:
+            await coordinator.async_reset_proxy_stats()
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_RESET_PROXY_STATS,
+        _reset_proxy_stats,
+        schema=vol.Schema({vol.Optional("device_id"): cv.string}),
+    )
     hass.services.async_register(
         DOMAIN, SERVICE_SET_SCHEDULE, _set_schedule, schema=_SCHEDULE_SCHEMA
     )

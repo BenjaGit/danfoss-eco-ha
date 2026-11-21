@@ -26,6 +26,7 @@ async def async_setup_entry(
             EtrvSyncTimeButton(coordinator),
             EtrvRefreshButton(coordinator),
             EtrvDiscardPendingButton(coordinator),
+            EtrvResetProxyStatsButton(coordinator),
         ]
     )
 
@@ -71,3 +72,17 @@ class EtrvDiscardPendingButton(EtrvEntity, ButtonEntity):
     async def async_press(self) -> None:
         self.coordinator.async_discard_pending()
         await self.coordinator.async_request_refresh()
+
+
+class EtrvResetProxyStatsButton(EtrvEntity, ButtonEntity):
+    """Forget the counted connects per proxy, e.g. after a proxy was moved."""
+
+    _attr_translation_key = "reset_proxy_stats"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _always_available = True
+
+    def __init__(self, coordinator: EtrvCoordinator) -> None:
+        super().__init__(coordinator, "reset_proxy_stats")
+
+    async def async_press(self) -> None:
+        await self.coordinator.async_reset_proxy_stats()

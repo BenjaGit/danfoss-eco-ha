@@ -72,6 +72,7 @@ if "danfoss_eco.coordinator" not in sys.modules:
         EtrvError=EtrvError,
         signal_via=lambda *a: (None, None),
         scanner_name=lambda hass, source: source,
+        scanner_signals=lambda *a, **k: {},
         route=lambda *a, **k: (None, "ha"),
     )
 

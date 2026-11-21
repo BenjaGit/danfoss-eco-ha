@@ -2,6 +2,32 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.20 — fork: the proxy is chosen from signal and recent connects
+
+- The choice of proxy starts from how strongly each scanner hears the
+  thermostat. Measured over 53 thermostat-scanner pairs, signal strength
+  predicted the share of successful connects well (86 % above −60 dBm, 1 %
+  below −90 dBm), and the strongest scanner was the best one for 16 of 18
+  thermostats. A new or moved proxy is now used, or left alone, from its first
+  minute. The earlier finding that signal says nothing was measured before the
+  proxies' connect faults were fixed.
+- Counted connects correct the signal and fade: a connect counts half after 8
+  hours. Before, the counts ran from the last reset and were halved only at 200
+  attempts, so a proxy that got better or worse was judged on its past.
+- No mapping phase. Half of all connects used to go to the least-tried scanner
+  until each had 20 attempts, and one in ten after that, which by design was
+  the worst scanner. Now each scanner is tried in proportion to how good it may
+  be, given signal and connects.
+- A scanner with connects already waiting gives way to one that is nearly as
+  good, so one proxy no longer carries every thermostat it is best for.
+- A weak scanner gets up to 16 failures in a row before it is rested; 8 in a
+  row happen by chance every tenth time at one success in four.
+- New button **Reset proxy statistics** per thermostat and service
+  `danfoss_eco.reset_proxy_stats` (all thermostats when no device is given).
+- `proxy_stats` now also shows `expected` and `signal`; `attempts` and
+  `successes` are the faded counts. New value `signal` for `assigned_by` and
+  `proxy_choice`. Saved records from earlier versions are taken over.
+
 ## v1.3.0+benjagit.19 — fork: signal per scanner
 
 - A new diagnostic sensor per thermostat and scanner, `Signal <scanner>`, shows
