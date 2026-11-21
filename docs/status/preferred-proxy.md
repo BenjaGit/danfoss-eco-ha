@@ -2,6 +2,10 @@
 
 ## Næste skridt
 
+**INGEN genstart af HA før efter kl. 12:50 den 21/11-2026** (Benjamin, kl. ca. 10:45):
+indeklimatesten kører til 12:50, og nulstillingen 10:29 ramte dens start. Heller ingen
+genindlæsning af integrationen eller ændring af options i det tidsrum uden at spørge.
+
 Stand 21/11-2026 kl. 10:40: ny kortlægning er startet fra nul med alle rettelser (HA
 v1.3.0+benjagit.18, bt-proxy v1.0.3-benjagit.11). Benjamin bad om det, fordi de gamle tal mest
 viste proxy-logikkens fejl før 22:50 den 20/11 (fx valgte kontor 1 Gildesalen 23 % frem for
