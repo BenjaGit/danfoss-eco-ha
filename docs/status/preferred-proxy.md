@@ -5,7 +5,10 @@
 21/11 kl. 12:56: før-billede gemt, inden Benjamin flytter bt-proxy-3 (op på skabet) og
 bt-proxy-2 (teknikrummet): `baseline-2026-11-21-before-move.md` + `.json`. Efter flytningen:
 spørg Benjamin, nulstil så statistikken (kræver HA-stop) og sammenlign en lige så lang periode
-(2,5 time, 1 minuts poll). Indeklimatesten sluttede 12:50; genstart kræver stadig et ja hver gang.
+(2,5 time, 1 minuts poll). Benjamin svarede "Vent" på nulstilling kl. 14:15. Besked fra
+bt-proxy-agenten: bt-proxy-2 står på racket siden ca. 13:37 (26 % ok 13:41–14:21, hører ikke
+gildesal nord), er væk fra HA siden 14:28 (forkert VLAN), og lægges på kabel og genstartes;
+agenten skriver, når den er stabil. Nulstil ikke før da. Indeklimatesten sluttede 12:50; genstart kræver stadig et ja hver gang.
 
 Stand 21/11-2026 kl. 10:40: ny kortlægning er startet fra nul med alle rettelser (HA
 v1.3.0+benjagit.18, bt-proxy v1.0.3-benjagit.11). Benjamin bad om det, fordi de gamle tal mest
