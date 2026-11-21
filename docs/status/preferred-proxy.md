@@ -12,7 +12,14 @@ agenten skriver, når den er stabil. bt-proxy-2 stabil på kabel fra 14:42:52.
 **Efter-måling startet 21/11 kl. 15:30** (Benjamin sagde ja): statistik nulstillet med HA stoppet
 15:28–15:30, kopi af tallene før i `/config/danfoss_eco_store_backup_20261121_after_move/` på HA.
 Sammenlign 15:30–17:56 med før-billedet (10:30–12:56); bt-proxy-2's forbindelsesinterval-forsøg
-(6/12/200) er væk siden 13:37, og NUC'ens Bluetooth er stadig tændt. Indeklimatesten sluttede 12:50; genstart kræver stadig et ja hver gang.
+(6/12/200) er væk siden 13:37, og NUC'ens Bluetooth er stadig tændt.
+Efter-målingen er lavet (`baseline-2026-11-21-after-move.md`): gildesalen faldt 17–72 point.
+Placeringer: Benjamin har låst alle enheder på planen i artifact
+https://claude.ai/artifact/8zHRj6Cx9XyqC8XrVpW7XG (kopi: `placements-2026-11-21.json`, [etage, x, y]
+i cm, husplanens SVG-koordinater). Afstandsmodel fra målingerne: samme etage ≤5 m ca. 78 %, 5–7 m
+58 %, 7–9 m 48 %, 9–12 m 31 %; gennem etagedæk ≤3 m 72 %, 3–5 m 60 %, 5–7 m 32 %, >7 m ca. 5 %.
+Anbefaling givet 21/11 aften: en fjerde Pi på gildesalens vestvæg mellem vest nord og vest midt
+(kælder, x 390, y 1450); Benjamin har ikke besluttet noget. Poll står stadig på 1 minut. Indeklimatesten sluttede 12:50; genstart kræver stadig et ja hver gang.
 
 Stand 21/11-2026 kl. 10:40: ny kortlægning er startet fra nul med alle rettelser (HA
 v1.3.0+benjagit.18, bt-proxy v1.0.3-benjagit.11). Benjamin bad om det, fordi de gamle tal mest
