@@ -39,7 +39,11 @@ alle 18 har en proxy (9 Kontoret, 3 teknikrum, 4 Stuen, 2 gæsteværelse); gilde
 til bt-proxy-4 (signal −60, 4 af 6). bt-proxy-4 står i gæsteværelset.
 Mangler: mål virkningen på alder af seneste aflæsning (historik for
 `sensor.*_seneste_aflaesning` før/efter 22:33), ikke på forbindelsesrate. Dashboardets
-"Valgt"-kolonne kender ikke den nye værdi `signal`. Poll er stadig 1 minut. Indeklimatesten sluttede 12:50; genstart kræver stadig et ja hver gang.
+"Valgt"-kolonne kender ikke den nye værdi `signal`. Poll er stadig 1 minut.
+**Natmåling startet 21/11 kl. 23:00:53**: statistikken nulstillet med den nye service (uden HA-stop,
+virkede), 1 minuts poll. I morgen: sammenlign alder/afstand mellem aflæsninger
+(`sensor.*_seneste_aflaesning`) 23:01 → morgen med den gamle mekanik 15:30–21:20 samme dag (samme
+poll, men uden bt-proxy-4, så forskellen er ikke kun mekanikken), og se valg og tal pr. proxy. Indeklimatesten sluttede 12:50; genstart kræver stadig et ja hver gang.
 
 Stand 21/11-2026 kl. 10:40: ny kortlægning er startet fra nul med alle rettelser (HA
 v1.3.0+benjagit.18, bt-proxy v1.0.3-benjagit.11). Benjamin bad om det, fordi de gamle tal mest
