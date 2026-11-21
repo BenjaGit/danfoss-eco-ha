@@ -30,7 +30,16 @@ bt-proxy-1 og -3 får 65–90 % ved samme signal. Mistanke: støj ved racket (AP
 zigbee-antenne, stålplade). Ikke afprøvet. NUC'ens hci0 blev fjernet fra HA ca. 15:25 den 21/11 (oplyst af
 homeassistant-agenten), altså før efter-målingen. Dashboardet /lovelace/termostat-proxy har fra 22:06
 en signalmatrix og en graf pr. proxy (homeassistant-agenten). En fjerde Pi, bt-proxy-4, er oprettet
-af bt-proxy-agenten og har signalsensorer, men var offline kl. 22:02 (flyttes formentlig). Indeklimatesten sluttede 12:50; genstart kræver stadig et ja hver gang.
+af bt-proxy-agenten og har signalsensorer, men var offline kl. 22:02 (flyttes formentlig).
+21/11 kl. 22:33: **v1.3.0+benjagit.20 kører** (Benjamin bad om ny mekanik): valg ud fra signal som
+udgangspunkt (r = 0,90 mellem signal og forbindelsesrate over 53 par), talte forbindelser der
+halveres på 8 timer, Thompson sampling i stedet for kortlægning og faste 10 %, hensyn til kø, knap
+og service til nulstilling (`danfoss_eco.reset_proxy_stats`). Gamle tal blev overtaget. Kl. 22:38:
+alle 18 har en proxy (9 Kontoret, 3 teknikrum, 4 Stuen, 2 gæsteværelse); gildesal nord gik straks
+til bt-proxy-4 (signal −60, 4 af 6). bt-proxy-4 står i gæsteværelset.
+Mangler: mål virkningen på alder af seneste aflæsning (historik for
+`sensor.*_seneste_aflaesning` før/efter 22:33), ikke på forbindelsesrate. Dashboardets
+"Valgt"-kolonne kender ikke den nye værdi `signal`. Poll er stadig 1 minut. Indeklimatesten sluttede 12:50; genstart kræver stadig et ja hver gang.
 
 Stand 21/11-2026 kl. 10:40: ny kortlægning er startet fra nul med alle rettelser (HA
 v1.3.0+benjagit.18, bt-proxy v1.0.3-benjagit.11). Benjamin bad om det, fordi de gamle tal mest
