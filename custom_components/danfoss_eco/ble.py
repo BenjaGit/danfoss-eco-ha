@@ -61,6 +61,9 @@ _BLE_LOCKS: dict[str | None, _Turn] = {}
 # How long to wait for a connect. A good connect takes 9-12 s and one in ten
 # more than 13 s, so the usual 20 s (and the proxies' former 15 s) cut off
 # connects that were about to succeed. Stays above the proxies' own limit.
+# A scanner's RSSI for a valve counts as current for this long after the
+# advertisement it came from.
+SIGNAL_MAX_AGE_S = 120.0
 CONNECT_TIMEOUT_S = 40.0
 # One attempt per poll. The proxies retry by themselves inside their 30 s, so
 # a second attempt from here mostly repeated a failure while the scanner's
@@ -197,6 +200,32 @@ def advert_ages(hass: HomeAssistant, address: str) -> dict[str, float]:
         # its (short-lived) discovery table, so treat it as heard just now.
         ages[scanner.source] = 0.0 if seen is None else max(0.0, now - seen)
     return ages
+
+
+def scanner_signals(
+    hass: HomeAssistant, address: str, max_age: float = SIGNAL_MAX_AGE_S
+) -> dict[str, int]:
+    """RSSI of `address` on each connectable scanner that heard it recently.
+
+    Every scanner hears every valve in range all the time, whichever scanner
+    the valve is read through, so this judges a scanner's placement without
+    waiting for connects to go through it. A scanner keeps a valve listed for
+    minutes after its last advertisement; older than `max_age` is left out.
+    """
+    now = time.monotonic()
+    signals: dict[str, int] = {}
+    for device in bluetooth.async_scanner_devices_by_address(hass, address, True):
+        scanner = device.scanner
+        try:
+            seen = scanner.discovered_device_timestamps.get(address)
+        except Exception:  # noqa: BLE001 - scanner without timestamps
+            seen = None
+        if seen is not None and now - seen > max_age:
+            continue
+        rssi = device.advertisement.rssi
+        if rssi is not None:
+            signals[scanner.source] = rssi
+    return signals
 
 
 def strongest_scanner(hass: HomeAssistant, address: str) -> str | None:

@@ -2,6 +2,17 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.19 — fork: signal per scanner
+
+- A new diagnostic sensor per thermostat and scanner, `Signal <scanner>`, shows
+  how strongly that scanner hears the thermostat's advertisements. Every
+  scanner hears every valve in range all the time, so a proxy's placement can
+  be judged in minutes, without waiting for connects to go through it and
+  without resetting the connect statistics.
+- Sampled once a minute. The state is unknown while the scanner has not heard
+  the thermostat for two minutes, so the history also shows how much of the
+  time it was heard. Sensors appear by themselves when a scanner is added.
+
 ## v1.3.0+benjagit.18 — fork: the longest-unread thermostat goes first
 
 - Thermostats waiting for the same scanner are served by how long ago they

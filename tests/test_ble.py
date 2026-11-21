@@ -274,6 +274,56 @@ def test_signal_comes_from_connectable_scanners_only():
     assert calls == [True]
 
 
+def test_signal_per_scanner_leaves_out_scanners_that_went_quiet():
+    # One reading per scanner, so a proxy's placement can be judged without
+    # connecting through it. A scanner keeps a valve in its table for minutes
+    # after the last advertisement; that old RSSI must not pass for a current one.
+    now = ble.time.monotonic()
+
+    def device(source, rssi, seen):
+        return types.SimpleNamespace(
+            scanner=types.SimpleNamespace(
+                source=source,
+                discovered_device_timestamps={"00:04:2F:00:00:00": seen},
+            ),
+            advertisement=types.SimpleNamespace(rssi=rssi),
+        )
+
+    calls = []
+
+    def devices(hass, address, connectable):
+        calls.append(connectable)
+        return [
+            device("A", -58, now - 5),
+            device("B", -84, now - 100),
+            device("C", -90, now - 400),
+        ]
+
+    saved = ble.bluetooth
+    ble.bluetooth = types.SimpleNamespace(async_scanner_devices_by_address=devices)
+    try:
+        assert ble.scanner_signals(None, "00:04:2F:00:00:00") == {"A": -58, "B": -84}
+    finally:
+        ble.bluetooth = saved
+    assert calls == [True]
+
+
+def test_signal_per_scanner_keeps_a_scanner_without_timestamps():
+    scanner = types.SimpleNamespace(source="A")  # no discovered_device_timestamps
+    saved = ble.bluetooth
+    ble.bluetooth = types.SimpleNamespace(
+        async_scanner_devices_by_address=lambda hass, address, connectable: [
+            types.SimpleNamespace(
+                scanner=scanner, advertisement=types.SimpleNamespace(rssi=-70)
+            )
+        ]
+    )
+    try:
+        assert ble.scanner_signals(None, "00:04:2F:00:00:00") == {"A": -70}
+    finally:
+        ble.bluetooth = saved
+
+
 def test_signal_is_the_one_heard_by_the_scanner_that_read():
     def device(source, rssi):
         return types.SimpleNamespace(
