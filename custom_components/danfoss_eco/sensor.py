@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import timedelta
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -17,10 +18,12 @@ from homeassistant.const import (
     EntityCategory,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_track_time_interval
 
 from . import DanfossEcoConfigEntry
+from .ble import connectable_scanners, scanner_signals
 from .coordinator import EtrvCoordinator, EtrvState
 from .entity import EtrvEntity
 
@@ -29,6 +32,10 @@ from .entity import EtrvEntity
 class EtrvSensorDescription(SensorEntityDescription):
     value_fn: Callable[[EtrvState], object]
 
+
+# How often the per-scanner signal is sampled. The recorder stores a row per
+# changed reading, so this sets the history's resolution and its size.
+SIGNAL_INTERVAL = timedelta(seconds=60)
 
 SENSORS: tuple[EtrvSensorDescription, ...] = (
     EtrvSensorDescription(
@@ -87,6 +94,29 @@ async def async_setup_entry(
             EtrvPendingSensor(coordinator),
             EtrvProxySensor(coordinator),
         ]
+    )
+
+    # One signal sensor per scanner. Scanners come and go (a proxy is added,
+    # an adapter is switched off), so new ones are picked up as they appear.
+    signal_sensors: dict[str, EtrvScannerSignalSensor] = {}
+
+    @callback
+    def refresh_signals(_now=None) -> None:
+        new = [
+            EtrvScannerSignalSensor(coordinator, source, name)
+            for source, name in connectable_scanners(hass).items()
+            if source not in signal_sensors
+        ]
+        for sensor in signal_sensors.values():
+            if sensor.hass is not None:
+                sensor.async_write_ha_state()
+        if new:
+            signal_sensors.update({sensor.source: sensor for sensor in new})
+            async_add_entities(new)
+
+    refresh_signals()
+    entry.async_on_unload(
+        async_track_time_interval(hass, refresh_signals, SIGNAL_INTERVAL)
     )
 
 
@@ -160,3 +190,30 @@ class EtrvProxySensor(EtrvEntity, SensorEntity):
             "last_proxy": attributes["proxy"],
             "last_choice": attributes["proxy_choice"],
         }
+
+
+class EtrvScannerSignalSensor(EtrvEntity, SensorEntity):
+    """How strongly one scanner hears this thermostat's advertisements.
+
+    Unknown while the scanner has not heard the thermostat for two minutes,
+    so the history also shows how much of the time it was heard at all.
+    """
+
+    _attr_translation_key = "scanner_signal"
+    _attr_device_class = SensorDeviceClass.SIGNAL_STRENGTH
+    _attr_native_unit_of_measurement = SIGNAL_STRENGTH_DECIBELS_MILLIWATT
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _always_available = True
+
+    def __init__(self, coordinator: EtrvCoordinator, source: str, name: str) -> None:
+        super().__init__(coordinator, f"signal_{source.replace(':', '').lower()}")
+        self.source = source
+        # Home Assistant names a proxy "bt-proxy-1 (B8:27:EB:..)"; the address
+        # would only make the entity id long.
+        self._attr_translation_placeholders = {"scanner": name.split(" (")[0]}
+        self._attr_extra_state_attributes = {"scanner": source}
+
+    @property
+    def native_value(self) -> int | None:
+        return scanner_signals(self.hass, self.coordinator.address).get(self.source)

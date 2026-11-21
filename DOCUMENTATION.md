@@ -182,6 +182,7 @@ The main thermostat.
 | `sensor.<name>_battery` | Battery %, from the standard BLE battery characteristic. |
 | `sensor.<name>_room_temperature` | Same value as the climate current temperature, as its own sensor for history/automations. |
 | `sensor.<name>_bluetooth_signal` | RSSI in dBm. Its `source` attribute tells you **which adapter/proxy** currently hears the device — handy for placing proxies. |
+| `sensor.<name>_signal_<scanner>` | One per connectable scanner: RSSI in dBm of the thermostat's advertisements **as that scanner hears them**, sampled once a minute. Unknown while the scanner has not heard the thermostat for two minutes. Compare them to place a proxy: the numbers do not depend on which scanner the thermostat is read through. With many thermostats and scanners this is one recorder row per sensor per minute; disable the ones you do not need. |
 | `sensor.<name>_last_poll` | Timestamp of the last successful full read. If this stops advancing, connections are failing and the other entities are showing **cached** values from this moment. |
 | `sensor.<name>_pending_commands` | How many changes are waiting to be written to the thermostat. Its `changes` attribute lists them in plain language (e.g. `setpoint -> 22.0 °C`) and `queued_since` says when the oldest was made. Stays available when the device is not. |
 | `sensor.<name>_weekly_schedule` | `programmed` / `not set`. Its attributes list the on-device weekly program per day in plain language (e.g. `mon: 00:00-07:00 away, 07:00-22:00 home, 22:00-24:00 away`). |

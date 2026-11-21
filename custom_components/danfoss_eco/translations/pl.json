@@ -95,6 +95,9 @@
       "rssi": {
         "name": "Sygnał Bluetooth"
       },
+      "scanner_signal": {
+        "name": "Sygnał {scanner}"
+      },
       "last_poll": {
         "name": "Ostatni odczyt"
       },
