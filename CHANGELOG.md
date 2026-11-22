@@ -2,6 +2,23 @@
 
 All notable changes to this integration. Dates are release dates.
 
+## v1.3.0+benjagit.21 — fork: placement tests
+
+- A placement test measures for a set time how well every proxy reaches every
+  thermostat and keeps the result with a name and a note, so arrangements
+  (a proxy moved, an access point switched off) can be compared later.
+  Per thermostat and scanner: signal strength, share of the time heard,
+  connects and successes. Per thermostat: reads per hour, mean age of the
+  latest reading, share of the time it was older than 5 minutes, longest gap.
+- Services `danfoss_eco.start_placement_test` (name, note, minutes, optionally
+  reset the proxy statistics first), `stop_placement_test`,
+  `edit_placement_test` and `delete_placement_test`.
+- `sensor.danfoss_eco_placement_test` is `running` or `idle` and shows the
+  running test; every kept test is `sensor.danfoss_eco_placement_test_<id>`
+  with its result as attributes. Results are kept in Home Assistant's storage.
+- A restart of Home Assistant ends a running test and keeps what it measured,
+  marked as interrupted.
+
 ## v1.3.0+benjagit.20 — fork: the proxy is chosen from signal and recent connects
 
 - The choice of proxy starts from how strongly each scanner hears the

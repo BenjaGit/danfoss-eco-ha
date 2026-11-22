@@ -16,6 +16,7 @@ Two things make this more than a plain polling coordinator:
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
@@ -124,6 +125,8 @@ class EtrvCoordinator(DataUpdateCoordinator[EtrvState]):
         # Connect record per Bluetooth proxy, and the proxy locked in the
         # options if there is one.
         self.proxies = ProxyTracker(entry.options.get(CONF_PREFERRED_PROXY))
+        # Told about every successful read; a running placement test listens.
+        self.on_read: Callable[[], None] | None = None
         self.client = EtrvClient(
             hass,
             self.address,
@@ -326,6 +329,8 @@ class EtrvCoordinator(DataUpdateCoordinator[EtrvState]):
         self.consecutive_failures = 0
         self.last_error = None
         self.last_success = dt_util.utcnow()
+        if self.on_read is not None:
+            self.on_read()
         self._next_retry = 0.0
         self.async_cancel_retry()
 

@@ -141,6 +141,8 @@ class ProxyTracker:
         # The scanner the latest connect went through, and who chose it.
         self.last_source: str | None = None
         self.last_choice: str | None = None
+        # Told about every counted connect: (scanner, succeeded).
+        self.on_record: Callable[[str, bool], None] | None = None
 
     def set_locked(self, locked: str | None) -> None:
         self.locked = locked if locked and locked != AUTO else None
@@ -255,6 +257,8 @@ class ProxyTracker:
             stats.last_failure = now
         self.last_source = source
         self.last_choice = choice
+        if self.on_record is not None:
+            self.on_record(source, success)
 
     def reset(self) -> None:
         """Forget every counted connect, e.g. after proxies were moved."""

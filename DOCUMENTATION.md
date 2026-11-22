@@ -321,6 +321,31 @@ Two entities carry the same information for dashboards:
 
 Pairing always uses Home Assistant's choice.
 
+### Placement tests
+
+To find out whether a proxy stands well, or whether a change helped, run a
+placement test: call `danfoss_eco.start_placement_test` with a name, a note on
+what was changed and a number of minutes (30 gives usable connect numbers at
+1-minute polling; the signal settles in 10-15). The test covers every thermostat
+and ends by itself. `reset_proxy_stats: true` also forgets the counted connects
+first, for when a proxy was moved and the choice should start over.
+
+While it runs, `sensor.danfoss_eco_placement_test` is `running` and shows the
+minutes left and the connects so far. Each finished test is kept as
+`sensor.danfoss_eco_placement_test_<id>` with these attributes:
+
+| Attribute | Meaning |
+|---|---|
+| `name`, `note`, `started`, `ended`, `minutes`, `interrupted` | What was tested and when. |
+| `version`, `poll_minutes`, `proxy_stats_reset` | The conditions, so two tests can be told to be comparable. |
+| `summary` | Mean over the thermostats: `reads_per_hour`, `mean_age_min`, `stale_pct` (share of the time the latest reading was older than 5 minutes). |
+| `scanners` | Per scanner: `attempts`, `successes`, `rate_pct`. |
+| `thermostats` | Per thermostat: `reads`, `reads_per_hour`, `mean_age_min`, `stale_pct`, `longest_gap_min`, and per scanner `attempts`, `successes`, `signal` (mean dBm while heard) and `heard_pct`. |
+
+`edit_placement_test` changes a kept test's name or note, `delete_placement_test`
+removes it, `stop_placement_test` ends the running one early. Restarting Home
+Assistant ends a running test and keeps it, marked `interrupted`.
+
 ### Connections run side by side, one per scanner
 
 Each scanner connects to one thermostat at a time, and different scanners work at

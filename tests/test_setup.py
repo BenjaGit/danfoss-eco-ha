@@ -101,6 +101,8 @@ class FakeCoordinator:
 
     def __init__(self, hass, entry):
         self.address = "00:04:2F:00:00:00"
+        self.proxies = types.SimpleNamespace(on_record=None)
+        self.on_read = None
         self.cache_loaded = False
         self.refresh_started = False
         FakeCoordinator.instances.append(self)
@@ -124,6 +126,21 @@ pkg.__path__ = [_DIR]
 sys.modules["danfoss_eco"] = pkg
 _stub("danfoss_eco.ble", EtrvError=Exception)
 _stub("danfoss_eco.coordinator", EtrvCoordinator=FakeCoordinator)
+
+
+class FakePlacement:
+    def connect(self, address, source, success):
+        pass
+
+    def read(self, address):
+        pass
+
+
+async def _get_manager(hass):
+    return FakePlacement()
+
+
+_stub("danfoss_eco.placement_manager", async_get_manager=_get_manager)
 
 
 def _load(mod: str, name: str):

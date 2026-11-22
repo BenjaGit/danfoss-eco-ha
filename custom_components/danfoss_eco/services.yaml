@@ -66,3 +66,54 @@ reset_proxy_stats:
       selector:
         device:
           integration: danfoss_eco
+
+start_placement_test:
+  fields:
+    name:
+      required: true
+      example: "bt-proxy-2 on the wall"
+      selector:
+        text:
+    note:
+      required: false
+      selector:
+        text:
+          multiline: true
+    minutes:
+      required: false
+      default: 30
+      selector:
+        number:
+          min: 1
+          max: 2880
+          unit_of_measurement: min
+    reset_proxy_stats:
+      required: false
+      default: false
+      selector:
+        boolean:
+
+stop_placement_test:
+
+delete_placement_test:
+  fields:
+    test_id:
+      required: true
+      selector:
+        text:
+
+edit_placement_test:
+  fields:
+    test_id:
+      required: true
+      selector:
+        text:
+    name:
+      required: false
+      selector:
+        text:
+    note:
+      required: false
+      selector:
+        text:
+          multiline: true
