@@ -2,6 +2,16 @@
 
 ## Næste skridt
 
+22/11 kl. 10:59: **v1.3.0+benjagit.21 kører** med placeringstests (Benjamin bad om tests, der startes
+fra dashboardet og gemmes med noter). Tjenester `danfoss_eco.start/stop/edit/delete_placement_test`,
+tilstande `sensor.danfoss_eco_placement_test` og `..._<id>`, gemt i
+`/config/.storage/danfoss_eco.placement_tests`. De tre målinger fra 21/11 og natten er lagt ind som
+de første tests. Første rigtige test kører 10:59:39–11:29:39 (bt-proxy-2 på væggen mod badet,
+AP-Rack slukket, bt-proxy-4 i soveværelset, proxy-statistik nulstillet). Dashboard-sektionen er
+bestilt hos homeassistant-agenten. Fremover: brug en test til hver ændring i stedet for løse
+målinger. Kendt skævhed: testen bruger config entry-titlen ("Radiator garderobe"), enheden hedder
+"Radiator vindfang". Regel fra Benjamin: ingen ventetid, der låser sessionen; sæt en timer.
+
 22/11 kl. 10:29: natmålingen er aflæst, se `overnight-2026-11-22.md` (aflæsninger pr. time 9,8 → 19,1,
 middelalder 4,8 → 2,6 min). Åbent: gildesal vest midt og vest syd blev dårligere og mangler en
 proxy tæt på; bt-proxy-2 på racket forbinder kun 39 %; poll står stadig på 1 minut.
