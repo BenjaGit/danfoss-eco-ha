@@ -246,6 +246,60 @@
           "description": "Der Thermostat, der zurückgesetzt wird. Leer lassen, um alle Thermostate zurückzusetzen."
         }
       }
+    },
+    "start_placement_test": {
+      "name": "Start placement test",
+      "description": "Measures for a set time how well every proxy reaches every thermostat (signal, connects, age of the readings) and keeps the result with a name and a note.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "Short name of what is being tested."
+        },
+        "note": {
+          "name": "Note",
+          "description": "What was changed, e.g. which proxy was moved where."
+        },
+        "minutes": {
+          "name": "Minutes",
+          "description": "How long the test runs. 30 minutes gives usable connect numbers at 1-minute polling."
+        },
+        "reset_proxy_stats": {
+          "name": "Reset proxy statistics",
+          "description": "Forget the counted connects first, so the choice of proxy starts again from the signal."
+        }
+      }
+    },
+    "stop_placement_test": {
+      "name": "Stop placement test",
+      "description": "Ends the running test now and keeps what it measured."
+    },
+    "delete_placement_test": {
+      "name": "Delete placement test",
+      "description": "Removes a kept test.",
+      "fields": {
+        "test_id": {
+          "name": "Test",
+          "description": "The id of the test."
+        }
+      }
+    },
+    "edit_placement_test": {
+      "name": "Edit placement test",
+      "description": "Changes the name or note of a kept test.",
+      "fields": {
+        "test_id": {
+          "name": "Test",
+          "description": "The id of the test."
+        },
+        "name": {
+          "name": "Name",
+          "description": "New name."
+        },
+        "note": {
+          "name": "Note",
+          "description": "New note."
+        }
+      }
     }
   }
 }

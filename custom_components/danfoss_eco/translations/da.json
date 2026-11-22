@@ -246,6 +246,60 @@
           "description": "Termostaten der skal nulstilles. Lad feltet stå tomt for at nulstille alle termostater."
         }
       }
+    },
+    "start_placement_test": {
+      "name": "Start placeringstest",
+      "description": "Måler i en fastsat tid, hvor godt hver proxy når hver termostat (signal, forbindelser, aflæsningernes alder), og gemmer resultatet med navn og note.",
+      "fields": {
+        "name": {
+          "name": "Navn",
+          "description": "Kort navn på det, der testes."
+        },
+        "note": {
+          "name": "Note",
+          "description": "Hvad der er ændret, fx hvilken proxy der er flyttet hvorhen."
+        },
+        "minutes": {
+          "name": "Minutter",
+          "description": "Hvor længe testen kører. 30 minutter giver brugbare forbindelsestal ved 1 minuts poll."
+        },
+        "reset_proxy_stats": {
+          "name": "Nulstil proxy-statistik",
+          "description": "Glem først de talte forbindelser, så valget af proxy begynder forfra ud fra signalet."
+        }
+      }
+    },
+    "stop_placement_test": {
+      "name": "Stop placeringstest",
+      "description": "Afslutter den kørende test nu og gemmer det, den har målt."
+    },
+    "delete_placement_test": {
+      "name": "Slet placeringstest",
+      "description": "Fjerner en gemt test.",
+      "fields": {
+        "test_id": {
+          "name": "Test",
+          "description": "Testens id."
+        }
+      }
+    },
+    "edit_placement_test": {
+      "name": "Ret placeringstest",
+      "description": "Ændrer navn eller note på en gemt test.",
+      "fields": {
+        "test_id": {
+          "name": "Test",
+          "description": "Testens id."
+        },
+        "name": {
+          "name": "Navn",
+          "description": "Nyt navn."
+        },
+        "note": {
+          "name": "Note",
+          "description": "Ny note."
+        }
+      }
     }
   }
 }

@@ -16,6 +16,7 @@ from homeassistant.util import dt as dt_util
 from .ble import EtrvError
 from .const import CONF_PREFERRED_PROXY, DOMAIN
 from .coordinator import EtrvCoordinator
+from .placement_manager import async_get_manager
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,6 +36,10 @@ SERVICE_SET_VACATION = "set_vacation"
 SERVICE_SYNC_TIME = "sync_time"
 SERVICE_SET_SCHEDULE = "set_schedule"
 SERVICE_RESET_PROXY_STATS = "reset_proxy_stats"
+SERVICE_START_PLACEMENT_TEST = "start_placement_test"
+SERVICE_STOP_PLACEMENT_TEST = "stop_placement_test"
+SERVICE_DELETE_PLACEMENT_TEST = "delete_placement_test"
+SERVICE_EDIT_PLACEMENT_TEST = "edit_placement_test"
 
 _VACATION_SCHEMA = vol.Schema(
     {
@@ -74,6 +79,13 @@ type DanfossEcoConfigEntry = ConfigEntry[EtrvCoordinator]
 async def async_setup_entry(hass: HomeAssistant, entry: DanfossEcoConfigEntry) -> bool:
     coordinator = EtrvCoordinator(hass, entry)
     entry.runtime_data = coordinator
+    # A running placement test counts this thermostat's connects and reads.
+    placement = await async_get_manager(hass)
+    address = coordinator.address
+    coordinator.proxies.on_record = lambda source, success: placement.connect(
+        address, source, success
+    )
+    coordinator.on_read = lambda: placement.read(address)
     # Bring back the last reading and any undelivered writes before the first
     # poll, so a restart doesn't blank the dashboard or drop commands.
     await coordinator.async_load_cache()
@@ -199,6 +211,67 @@ def _async_register_services(hass: HomeAssistant) -> None:
         for coordinator in coordinators:
             await coordinator.async_reset_proxy_stats()
 
+    async def _start_placement_test(call: ServiceCall) -> None:
+        manager = await async_get_manager(hass)
+        await manager.async_start(
+            call.data["name"],
+            call.data.get("note", ""),
+            call.data.get("minutes", 30),
+            call.data.get("reset_proxy_stats", False),
+        )
+
+    async def _stop_placement_test(call: ServiceCall) -> None:
+        manager = await async_get_manager(hass)
+        await manager.async_stop(interrupted=True)
+
+    async def _delete_placement_test(call: ServiceCall) -> None:
+        manager = await async_get_manager(hass)
+        if not await manager.async_delete(call.data["test_id"]):
+            raise EtrvError(f"No placement test {call.data['test_id']}")
+
+    async def _edit_placement_test(call: ServiceCall) -> None:
+        manager = await async_get_manager(hass)
+        if not await manager.async_set_note(
+            call.data["test_id"], call.data.get("note"), call.data.get("name")
+        ):
+            raise EtrvError(f"No placement test {call.data['test_id']}")
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_START_PLACEMENT_TEST,
+        _start_placement_test,
+        schema=vol.Schema(
+            {
+                vol.Required("name"): cv.string,
+                vol.Optional("note"): cv.string,
+                vol.Optional("minutes"): vol.All(
+                    vol.Coerce(float), vol.Range(min=1, max=2880)
+                ),
+                vol.Optional("reset_proxy_stats"): cv.boolean,
+            }
+        ),
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_STOP_PLACEMENT_TEST, _stop_placement_test, schema=vol.Schema({})
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_DELETE_PLACEMENT_TEST,
+        _delete_placement_test,
+        schema=vol.Schema({vol.Required("test_id"): cv.string}),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_EDIT_PLACEMENT_TEST,
+        _edit_placement_test,
+        schema=vol.Schema(
+            {
+                vol.Required("test_id"): cv.string,
+                vol.Optional("note"): cv.string,
+                vol.Optional("name"): cv.string,
+            }
+        ),
+    )
     hass.services.async_register(
         DOMAIN,
         SERVICE_RESET_PROXY_STATS,
