@@ -2,6 +2,10 @@
 
 ## Næste skridt
 
+22/11 kl. 10:29: natmålingen er aflæst, se `overnight-2026-11-22.md` (aflæsninger pr. time 9,8 → 19,1,
+middelalder 4,8 → 2,6 min). Åbent: gildesal vest midt og vest syd blev dårligere og mangler en
+proxy tæt på; bt-proxy-2 på racket forbinder kun 39 %; poll står stadig på 1 minut.
+
 21/11 kl. 12:56: før-billede gemt, inden Benjamin flytter bt-proxy-3 (op på skabet) og
 bt-proxy-2 (teknikrummet): `baseline-2026-11-21-before-move.md` + `.json`. Efter flytningen:
 spørg Benjamin, nulstil så statistikken (kræver HA-stop) og sammenlign en lige så lang periode
